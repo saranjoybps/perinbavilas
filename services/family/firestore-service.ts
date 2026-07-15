@@ -1,0 +1,463 @@
+'use server';
+
+import { FamilyMember, FamilyRecord } from '@/types/family';
+import { adminDb } from '@/lib/firebase/admin';
+import { deleteFamilyImages } from '@/services/family/image-service';
+
+const COLLECTION_NAME = 'families';
+
+let cachedRecords: FamilyRecord[] | null = null;
+let lastLoadTime = 0;
+const CACHE_TTL = 5000;
+
+function sanitizeDocId(code: string): string {
+  return code.replace(/\//g, '-');
+}
+
+function recordToFamilyRecord(doc: FirebaseFirestore.DocumentSnapshot): FamilyRecord | null {
+  const data = doc.data();
+  if (!data) return null;
+
+  return {
+    code: data.code || doc.id,
+    name: data.name || '',
+    dob: data.dob || null,
+    dod: data.dod || null,
+    spouse: data.spouse || { name: '', dob: null, dod: null },
+    family_name: data.family_name || null,
+    address: data.address || null,
+    cell_numbers: data.cell_numbers || [],
+    landline: data.landline || null,
+    email: data.email || null,
+    occupation: data.occupation || null,
+    photos: data.photos || [],
+    children: (data.children || []).map((c: Record<string, unknown>) => ({
+      code: c.code as string,
+      name: c.name as string,
+      dob: (c.dob as string) || null,
+      dod: (c.dod as string) || null,
+    })),
+    _sourceFile: 'firestore',
+    _fileOrder: data._fileOrder || 0,
+    _editedAt: data._editedAt || undefined,
+  };
+}
+
+export async function loadAllRecords(): Promise<FamilyRecord[]> {
+  const now = Date.now();
+  if (cachedRecords && now - lastLoadTime < CACHE_TTL) {
+    return cachedRecords;
+  }
+
+  try {
+    const snapshot = await adminDb.collection(COLLECTION_NAME).get();
+    const allRecords: FamilyRecord[] = [];
+
+    for (const doc of snapshot.docs) {
+      const record = recordToFamilyRecord(doc);
+      if (record) {
+        allRecords.push(record);
+      }
+    }
+
+    const recordMap = new Map<string, FamilyRecord>();
+    for (const r of allRecords) {
+      recordMap.set(r.code, r);
+    }
+
+    function findRecord(code: string): FamilyRecord | undefined {
+      if (recordMap.has(code)) return recordMap.get(code);
+      for (const [key, record] of recordMap) {
+        if (key.startsWith(code + '/') || key.startsWith(code + '-')) {
+          return record;
+        }
+      }
+      return undefined;
+    }
+
+    function getActualCode(code: string): string | undefined {
+      const record = findRecord(code);
+      return record?.code;
+    }
+
+    const familyRoots = allRecords
+      .filter(r => /^[1-7]$/.test(r.code))
+      .sort((a, b) => a.code.localeCompare(b.code));
+
+    const records: FamilyRecord[] = [];
+    const visited = new Set<string>();
+
+    for (const root of familyRoots) {
+      const queue: string[] = [root.code];
+      while (queue.length > 0) {
+        const code = queue.shift()!;
+        const actualCode = getActualCode(code);
+        if (!actualCode || visited.has(actualCode)) continue;
+
+        const record = recordMap.get(actualCode);
+        if (record) {
+          visited.add(actualCode);
+          records.push(record);
+          const unvisitedChildren = (record.children || [])
+            .filter(child => {
+              const childActual = getActualCode(child.code);
+              return childActual && !visited.has(childActual);
+            })
+            .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+          for (const child of unvisitedChildren) {
+            queue.push(child.code);
+          }
+        }
+      }
+    }
+
+    for (const r of allRecords) {
+      if (!visited.has(r.code)) {
+        records.push(r);
+      }
+    }
+
+    cachedRecords = records;
+    lastLoadTime = now;
+    return records;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Failed to load records from Firestore:', message);
+    return [];
+  }
+}
+
+export async function getRecordByCode(code: string): Promise<FamilyRecord | null> {
+  try {
+    const docId = sanitizeDocId(code);
+    const doc = await adminDb.collection(COLLECTION_NAME).doc(docId).get();
+    return recordToFamilyRecord(doc);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to get record ${code}:`, message);
+    return null;
+  }
+}
+
+export async function createRecord(data: FamilyMember): Promise<FamilyRecord> {
+  const records = await loadAllRecords();
+
+  if (records.some(r => r.code === data.code)) {
+    throw new Error(`Duplicate code: ${data.code} already exists`);
+  }
+
+  const recordMap = new Map<string, FamilyRecord>();
+  for (const r of records) {
+    recordMap.set(r.code, r);
+  }
+
+  let parentCode: string | null = null;
+
+  if (data.code.includes('/')) {
+    const [childLeft, childRight] = data.code.split('/');
+    for (let trim = 1; trim < Math.min(childLeft.length, childRight.length); trim++) {
+      const candidateParent = `${childLeft.slice(0, -trim)}/${childRight.slice(0, -trim)}`;
+      if (recordMap.has(candidateParent)) {
+        parentCode = candidateParent;
+        break;
+      }
+    }
+    if (!parentCode) {
+      for (let trim = 1; trim < childLeft.length; trim++) {
+        const candidateParent = childLeft.slice(0, -trim);
+        if (recordMap.has(candidateParent)) {
+          parentCode = candidateParent;
+          break;
+        }
+      }
+    }
+  } else {
+    for (let i = data.code.length - 1; i >= 1; i--) {
+      const prefix = data.code.substring(0, i);
+      if (recordMap.has(prefix)) {
+        parentCode = prefix;
+        break;
+      }
+    }
+    if (!parentCode) {
+      const slashIdx = data.code.lastIndexOf('/');
+      if (slashIdx > 0) {
+        const parent = data.code.substring(0, slashIdx);
+        if (recordMap.has(parent)) parentCode = parent;
+      }
+    }
+    if (!parentCode) {
+      const dashIdx = data.code.lastIndexOf('-');
+      if (dashIdx > 0) {
+        const parent = data.code.substring(0, dashIdx);
+        if (recordMap.has(parent)) parentCode = parent;
+      }
+    }
+  }
+
+  const docId = sanitizeDocId(data.code);
+  const maxOrder = records.reduce((max, r) => Math.max(max, r._fileOrder), 0);
+
+  const newRecord: FamilyRecord = {
+    ...data,
+    photos: data.photos || [],
+    children: (data.children || []).map(c => ({
+      code: c.code,
+      name: c.name,
+      dob: c.dob || null,
+      dod: c.dod || null,
+    })),
+    spouse: data.spouse || { name: '', dob: null, dod: null },
+    _sourceFile: 'firestore',
+    _fileOrder: maxOrder + 1,
+    _editedAt: new Date().toISOString(),
+  };
+
+  const { _sourceFile, _editedAt, _fileOrder, ...memberData } = newRecord;
+  await adminDb.collection(COLLECTION_NAME).doc(docId).set({
+    ...memberData,
+    _fileOrder,
+    _editedAt,
+    createdAt: new Date(),
+  });
+
+  if (parentCode) {
+    const parentId = sanitizeDocId(parentCode);
+    const parentDoc = await adminDb.collection(COLLECTION_NAME).doc(parentId).get();
+    const parentData = parentDoc.data();
+    if (parentData) {
+      const existingChildren = parentData.children || [];
+      if (!existingChildren.some((c: any) => c.code === data.code)) {
+        await adminDb.collection(COLLECTION_NAME).doc(parentId).update({
+          children: [...existingChildren, { code: data.code, name: data.name, dob: null, dod: null }],
+        });
+      }
+    }
+  }
+
+  cachedRecords = null;
+  return newRecord;
+}
+
+export async function updateRecord(code: string, updates: Partial<FamilyMember>): Promise<FamilyRecord> {
+  const records = await loadAllRecords();
+  const existing = records.find(r => r.code === code);
+
+  if (!existing) {
+    throw new Error(`Record not found: ${code}`);
+  }
+
+  if (updates.code && updates.code !== code && records.some(r => r.code === updates.code)) {
+    throw new Error(`Duplicate code: ${updates.code} already exists`);
+  }
+
+  const docId = sanitizeDocId(code);
+
+  const updatedRecord: FamilyRecord = {
+    ...existing,
+    ...updates,
+    children: updates.children
+      ? updates.children.map(c => ({ code: c.code, name: c.name, dob: c.dob || null, dod: c.dod || null }))
+      : existing.children,
+    spouse: updates.spouse || existing.spouse,
+    photos: updates.photos || existing.photos,
+    _editedAt: new Date().toISOString(),
+  } as FamilyRecord;
+
+  const { _sourceFile, _editedAt, _fileOrder, ...memberData } = updatedRecord;
+  await adminDb.collection(COLLECTION_NAME).doc(docId).set({
+    ...memberData,
+    _fileOrder: _fileOrder || existing._fileOrder,
+    _editedAt,
+    updatedAt: new Date(),
+  }, { merge: true });
+
+  if (updates.code && updates.code !== code) {
+    const newDocId = sanitizeDocId(updates.code);
+    await adminDb.collection(COLLECTION_NAME).doc(docId).delete();
+    const { _sourceFile: sf, _editedAt: ea, _fileOrder: fo, ...newMemberData } = updatedRecord;
+    await adminDb.collection(COLLECTION_NAME).doc(newDocId).set({
+      ...newMemberData,
+      _fileOrder: fo,
+      _editedAt: ea,
+      createdAt: new Date(),
+    });
+  }
+
+  cachedRecords = null;
+  return updatedRecord;
+}
+
+export async function deleteRecord(code: string): Promise<void> {
+  const records = await loadAllRecords();
+  const record = records.find(r => r.code === code);
+
+  if (!record) {
+    throw new Error(`Record not found: ${code}`);
+  }
+
+  if (record.photos && record.photos.length > 0) {
+    try { await deleteFamilyImages(record.photos); } catch {}
+  }
+
+  const docId = sanitizeDocId(code);
+  await adminDb.collection(COLLECTION_NAME).doc(docId).delete();
+
+  cachedRecords = null;
+}
+
+export async function duplicateRecord(code: string): Promise<FamilyRecord> {
+  const records = await loadAllRecords();
+  const original = records.find(r => r.code === code);
+
+  if (!original) {
+    throw new Error(`Record not found: ${code}`);
+  }
+
+  const newCode = `${code}_copy`;
+  let counter = 1;
+  let finalCode = newCode;
+  while (records.some(r => r.code === finalCode)) {
+    finalCode = `${code}_copy_${counter}`;
+    counter++;
+  }
+
+  const docId = sanitizeDocId(finalCode);
+  const maxOrder = records.reduce((max, r) => Math.max(max, r._fileOrder), 0);
+
+  const newRecord: FamilyRecord = {
+    ...original,
+    code: finalCode,
+    name: `${original.name} (Copy)`,
+    _sourceFile: 'firestore',
+    _fileOrder: maxOrder + 1,
+    _editedAt: new Date().toISOString(),
+  };
+
+  const { _sourceFile, _editedAt, _fileOrder, ...memberData } = newRecord;
+  await adminDb.collection(COLLECTION_NAME).doc(docId).set({
+    ...memberData,
+    _fileOrder,
+    _editedAt,
+    createdAt: new Date(),
+  });
+
+  cachedRecords = null;
+  return newRecord;
+}
+
+export async function reloadData(): Promise<FamilyRecord[]> {
+  cachedRecords = null;
+  lastLoadTime = 0;
+  return loadAllRecords();
+}
+
+export async function getJsonFilesInfo(): Promise<{ name: string; count: number }[]> {
+  const records = await loadAllRecords();
+  return [{ name: 'Firestore Collection', count: records.length }];
+}
+
+export async function exportAllAsJson(): Promise<string> {
+  const records = await loadAllRecords();
+  const cleanRecords = records.map(r => {
+    const { _sourceFile, _editedAt, _fileOrder, ...member } = r;
+    return member;
+  });
+  return JSON.stringify(cleanRecords, null, 2);
+}
+
+export async function undoDelete(code: string, backupContent: string): Promise<void> {
+  const records = await loadAllRecords();
+  const data = JSON.parse(backupContent) as FamilyMember[];
+  const restored = data.find(r => r.code === code);
+
+  if (!restored) {
+    throw new Error(`Record not found in backup: ${code}`);
+  }
+
+  if (records.some(r => r.code === code)) {
+    throw new Error(`Code ${code} already exists. Cannot restore.`);
+  }
+
+  const docId = sanitizeDocId(code);
+  const maxOrder = records.reduce((max, r) => Math.max(max, r._fileOrder), 0);
+
+  const newRecord: FamilyRecord = {
+    ...restored,
+    photos: restored.photos || [],
+    children: (restored.children || []).map(c => ({
+      code: c.code, name: c.name, dob: c.dob || null, dod: c.dod || null,
+    })),
+    spouse: restored.spouse || { name: '', dob: null, dod: null },
+    _sourceFile: 'firestore',
+    _fileOrder: maxOrder + 1,
+    _editedAt: new Date().toISOString(),
+  };
+
+  const { _sourceFile, _editedAt, _fileOrder, ...memberData } = newRecord;
+  await adminDb.collection(COLLECTION_NAME).doc(docId).set({
+    ...memberData,
+    _fileOrder,
+    _editedAt,
+    createdAt: new Date(),
+  });
+
+  cachedRecords = null;
+}
+
+export async function generateNextCode(parentCode: string, spouseFamilyCode?: string): Promise<string> {
+  const records = await loadAllRecords();
+
+  if (parentCode.includes('/')) {
+    const [leftSide, rightSide] = parentCode.split('/');
+    const directChildren = records.filter(r => {
+      if (!r.code.includes('/')) return false;
+      const [childLeft] = r.code.split('/');
+      return childLeft.startsWith(leftSide) && childLeft.length === leftSide.length + 1;
+    });
+
+    if (directChildren.length === 0) {
+      return `${leftSide}1/${rightSide}1`;
+    }
+
+    const maxChildNum = Math.max(...directChildren.map(r => {
+      const [childLeft] = r.code.split('/');
+      return parseInt(childLeft.slice(-1), 10);
+    }));
+    return `${leftSide}${maxChildNum + 1}/${rightSide}${maxChildNum + 1}`;
+  }
+
+  if (spouseFamilyCode) {
+    const directChildren = records.filter(r => {
+      if (!r.code.includes('/')) return false;
+      const [childLeft] = r.code.split('/');
+      return childLeft.startsWith(parentCode) && childLeft.length === parentCode.length + 1;
+    });
+
+    if (directChildren.length === 0) {
+      return `${parentCode}1/${spouseFamilyCode}1`;
+    }
+
+    const maxChildNum = Math.max(...directChildren.map(r => {
+      const [childLeft] = r.code.split('/');
+      return parseInt(childLeft.slice(-1), 10);
+    }));
+    return `${parentCode}${maxChildNum + 1}/${spouseFamilyCode}${maxChildNum + 1}`;
+  }
+
+  const directChildren = records.filter(r => {
+    return r.code.startsWith(parentCode) && r.code.length === parentCode.length + 1 && r.code !== parentCode;
+  });
+
+  if (directChildren.length === 0) {
+    return `${parentCode}1`;
+  }
+
+  const maxChildNum = Math.max(...directChildren.map(r => parseInt(r.code.slice(-1), 10)));
+  return `${parentCode}${maxChildNum + 1}`;
+}
+
+export async function getChildSuggestions(): Promise<{ code: string; name: string }[]> {
+  const records = await loadAllRecords();
+  return records.map(r => ({ code: r.code, name: r.name }));
+}

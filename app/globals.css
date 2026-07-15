@@ -1,0 +1,269 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* ── Palette ── */
+  --color-white:        #FFFFFF;
+  --color-cloud-white:  #F8FAFC;
+  --color-warm-cream:   #FFF7ED;
+  --color-sky-soft:     #E0F2FE;
+  --color-sky-light:    #BAE6FD;
+  --color-sky-pale:     #F0F9FF;
+  --color-gold:         #D4AF37;
+  --color-gold-deep:    #C49B1A;
+  --color-light-gray:   #E5E7EB;
+  --color-ink:          #1A1008;
+  --color-ink-muted:    rgba(26, 16, 8, 0.55);
+  --color-ink-faint:    rgba(26, 16, 8, 0.35);
+
+  /* ── Fonts ── */
+  --font-sans:    var(--font-inter);
+  --font-serif:   var(--font-playfair);
+  --font-display: var(--font-cormorant);
+}
+
+/* ── Reset & Base ── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: #F8FAFC;
+    color: #1A1008;
+    font-family: var(--font-inter, Inter, system-ui, sans-serif);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── Sky gradient (hero background) ── */
+.sky-gradient {
+  background: linear-gradient(
+    180deg,
+    #2E9FDC 0%,
+    #45AEE6 5%,
+    #6CC4EF 12%,
+    #96D8F5 22%,
+    #BCE8F9 34%,
+    #D6F1FC 46%,
+    #EAFAFD 58%,
+    #F4F1EA 72%,
+    #FFF7ED 85%,
+    #FFFBF7 100%
+  );
+}
+
+/* ── Glassmorphism cards ── */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.glass-warm {
+  background: rgba(255, 251, 245, 0.75);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+}
+
+/* ── Cloud shapes ── */
+.cloud-shape {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Cloud drift animations ── */
+@keyframes cloudDrift1 {
+  0%, 100% { transform: translateX(0px)    translateY(0px);   }
+  30%       { transform: translateX(140px)  translateY(-28px); }
+  60%       { transform: translateX(-90px)  translateY(20px);  }
+}
+
+@keyframes cloudDrift2 {
+  0%, 100% { transform: translateX(0px)    translateY(0px);   }
+  40%       { transform: translateX(-150px) translateY(32px);  }
+  75%       { transform: translateX(95px)   translateY(-22px); }
+}
+
+@keyframes cloudDrift3 {
+  0%, 100% { transform: translateX(0px)    translateY(0px);   }
+  50%       { transform: translateX(165px)  translateY(-36px); }
+}
+
+@keyframes cloudDrift4 {
+  0%, 100% { transform: translateX(0px)    translateY(0px);   }
+  35%       { transform: translateX(-120px) translateY(26px);  }
+  70%       { transform: translateX(80px)   translateY(-30px); }
+}
+
+/* ── Sun animations ── */
+@keyframes sunPulse {
+  0%, 100% { opacity: 1;    transform: scale(1);    }
+  50%       { opacity: 0.78; transform: scale(1.18); }
+}
+
+@keyframes sunRaysSpin {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes sunDiscGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 0   0px  rgba(255,255,220,0.90),
+      0 0 38px 10px rgba(255,215,0,0.60),
+      0 0 80px 30px rgba(255,185,0,0.28),
+      0 0 160px 60px rgba(255,165,0,0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0   0px  rgba(255,255,230,0.95),
+      0 0 55px 18px rgba(255,225,0,0.78),
+      0 0 110px 45px rgba(255,195,0,0.40),
+      0 0 200px 80px rgba(255,175,0,0.18);
+  }
+}
+
+/* ── God ray light shafts (opacity pulse per ray) ── */
+@keyframes godRaySweep {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1.0;  }
+}
+
+/* ── Floating UI element ── */
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0px);  }
+  50%       { transform: translateY(-10px); }
+}
+
+/* ── Gold shimmer text ── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    #C49B1A 0%,
+    #D4AF37 38%,
+    #E8CA60 55%,
+    #D4AF37 70%,
+    #C49B1A 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 5s linear infinite;
+}
+
+/* ── Gold rule divider ── */
+.gold-rule {
+  display: block;
+  width: 56px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+}
+
+/* ── Sunlight glow overlay ── */
+.sunlight-glow {
+  background: radial-gradient(
+    ellipse 70% 60% at 65% 20%,
+    rgba(255, 230, 100, 0.22) 0%,
+    rgba(255, 200, 60, 0.10) 40%,
+    transparent 70%
+  );
+}
+
+/* ── Soft cloud shadow for cards ── */
+.shadow-cloud {
+  box-shadow:
+    0 2px 8px  rgba(0, 0, 0, 0.04),
+    0 8px 30px rgba(0, 0, 0, 0.06),
+    0 24px 64px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-gold {
+  box-shadow:
+    0 4px 24px rgba(212, 175, 55, 0.15),
+    0 1px 6px  rgba(212, 175, 55, 0.08);
+}
+
+/* ── Section transition cloud strip ── */
+.cloud-divider {
+  position: relative;
+  height: 120px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar          { width: 5px; }
+::-webkit-scrollbar-track    { background: #F8FAFC; }
+::-webkit-scrollbar-thumb    { background: rgba(196, 155, 26, 0.28); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(196, 155, 26, 0.55); }
+
+/* ── Selection ── */
+::selection {
+  background: rgba(212, 175, 55, 0.18);
+  color: #1A1008;
+}
+
+/* ── Lenis smoothness ── */
+html.lenis, html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* ── Utility: hide scrollbar but keep scroll ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Print ── */
+@media print {
+  .no-print { display: none !important; }
+}
+
+/* ── Scroll progress bar ── */
+.scroll-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #C49B1A, #D4AF37, #E8CA60);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ── Cinematic animation utilities ── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Split-text word token for GSAP word-by-word reveal */
+.word-token {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+
+/* Gallery card — CSS initial state for GSAP batch reveal */
+.gallery-card-init {
+  opacity: 0;
+  transform: translateY(40px) scale(0.94);
+  will-change: transform, opacity;
+}
