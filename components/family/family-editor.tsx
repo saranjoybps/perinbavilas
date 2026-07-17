@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { FamilyRecord, FamilyMember } from "@/types/family";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { addFamily, updateFamily, getFamilyNextCode, getFamilies } from "@/lib/api";
+import { addFamily, updateFamily, getFamilies } from "@/lib/api";
 import { deleteImage, uploadImage } from "@/services/family/image-service";
 import { ChildrenEditor } from "./children-editor";
 import { PhotoUpload } from "./photo-upload";
+import { DatePicker } from "./date-picker";
 
 const familySchema = z.object({
   code: z.string().min(1, "Code is required"),
@@ -115,7 +116,7 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
   const removedOriginalsRef = useRef<Set<string>>(new Set());
   const [parentCode, setParentCode] = useState<string>("");
   const [allRecords, setAllRecords] = useState<FamilyRecord[]>([]);
-  const [generatingCode, setGeneratingCode] = useState(false);
+  const [selectedChildCode, setSelectedChildCode] = useState<string>("");
 
   const getDefaults = (r?: FamilyRecord): FamilyFormValues => ({
     code: r?.code || "",
@@ -175,21 +176,21 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
     }
   }, [originalPhotos]);
 
-  const handleParentChange = useCallback(async (newParentCode: string) => {
+  const childrenOfParent = useMemo(() => {
+    if (!parentCode) return [];
+    const parent = allRecords.find(r => r.code === parentCode);
+    return parent?.children ?? [];
+  }, [parentCode, allRecords]);
+
+  const handleParentChange = useCallback((newParentCode: string) => {
     setParentCode(newParentCode);
-    if (newParentCode) {
-      setGeneratingCode(true);
-      try {
-        const { code: nextCode } = await getFamilyNextCode(newParentCode);
-        setValue("code", nextCode);
-      } catch {
-        toast.error("Failed to generate code");
-      } finally {
-        setGeneratingCode(false);
-      }
-    } else {
-      setValue("code", "");
-    }
+    setSelectedChildCode("");
+    setValue("code", "");
+  }, [setValue]);
+
+  const handleChildSelect = useCallback((childCode: string) => {
+    setSelectedChildCode(childCode);
+    setValue("code", childCode);
   }, [setValue]);
 
   const onSubmit = async (values: FamilyFormValues) => {
@@ -277,21 +278,63 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
                       ))}
                     </select>
                   </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={labelStyle}>Auto-Generated Code</label>
-                    <input
-                      style={{ ...inputStyle, background: 'rgba(212,175,55,0.08)', cursor: 'default', maxWidth: '14rem' }}
-                      value={watch("code") || ""}
-                      readOnly
-                      placeholder={generatingCode ? "Generating..." : "Select parent first"}
-                    />
-                    {errors.code && <p style={errorTextStyle}>{errors.code.message}</p>}
-                  </div>
+                  {parentCode && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>Select Child Code *</label>
+                      {childrenOfParent.length === 0 ? (
+                        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.78rem', color: 'rgba(26,16,8,0.4)', fontStyle: 'italic' }}>
+                          No children found for this parent.
+                        </p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {childrenOfParent.map((child) => (
+                            <button
+                              key={child.code}
+                              type="button"
+                              onClick={() => handleChildSelect(child.code)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                padding: '0.55rem 0.75rem',
+                                background: selectedChildCode === child.code ? 'rgba(196,155,26,0.1)' : 'rgba(255,255,255,0.5)',
+                                border: selectedChildCode === child.code ? '1px solid rgba(196,155,26,0.5)' : '1px solid rgba(212,175,55,0.15)',
+                                borderRadius: '5px', cursor: 'pointer', transition: 'all 0.15s',
+                                textAlign: 'left', fontFamily: 'var(--font-inter)',
+                              }}
+                            >
+                              <span style={{
+                                width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.4)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                background: selectedChildCode === child.code ? '#C49B1A' : 'transparent',
+                              }}>
+                                {selectedChildCode === child.code && (
+                                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
+                                )}
+                              </span>
+                              <span style={{ fontSize: '0.78rem', color: '#1A1008', fontWeight: selectedChildCode === child.code ? 600 : 400 }}>
+                                <strong>{child.code}</strong> — {child.name}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {errors.code && <p style={errorTextStyle}>{errors.code.message}</p>}
+                    </div>
+                  )}
+                  {selectedChildCode && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>Family Code</label>
+                      <input
+                        style={{ ...inputStyle, background: 'rgba(212,175,55,0.08)', cursor: 'default', maxWidth: '14rem' }}
+                        value={watch("code") || ""}
+                        readOnly
+                      />
+                    </div>
+                  )}
                 </>
               ) : (
                 <div>
                   <label style={labelStyle}>Family Code *</label>
-                  <input style={{ ...inputStyle, background: 'rgba(212,175,55,0.08)', cursor: 'default' }} value={watch("code")} readOnly />
+                  <input style={inputStyle} value={watch("code") || ""} onChange={(e) => setValue("code", e.target.value)} />
                   {errors.code && <p style={errorTextStyle}>{errors.code.message}</p>}
                 </div>
               )}
@@ -302,11 +345,11 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
               </div>
               <div>
                 <label style={labelStyle}>Date of Birth</label>
-                <input style={inputStyle} value={watch("dob") || ""} onChange={(e) => setValue("dob", e.target.value || null)} />
+                <DatePicker value={watch("dob")} onChange={(v) => setValue("dob", v)} />
               </div>
               <div>
                 <label style={labelStyle}>Date of Death</label>
-                <input style={inputStyle} value={watch("dod") || ""} onChange={(e) => setValue("dod", e.target.value || null)} />
+                <DatePicker value={watch("dod")} onChange={(v) => setValue("dod", v)} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Family Name</label>
@@ -342,14 +385,14 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
                 <input style={inputStyle} {...register("spouseName")} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                <div>
-                  <label style={labelStyle}>Spouse DOB</label>
-                  <input style={inputStyle} value={watch("spouseDob") || ""} onChange={(e) => setValue("spouseDob", e.target.value || null)} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Spouse DOD</label>
-                  <input style={inputStyle} value={watch("spouseDod") || ""} onChange={(e) => setValue("spouseDod", e.target.value || null)} />
-                </div>
+                  <div>
+                    <label style={labelStyle}>Spouse DOB</label>
+                    <DatePicker value={watch("spouseDob")} onChange={(v) => setValue("spouseDob", v)} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Spouse DOD</label>
+                    <DatePicker value={watch("spouseDod")} onChange={(v) => setValue("spouseDod", v)} />
+                  </div>
               </div>
             </div>
           )}

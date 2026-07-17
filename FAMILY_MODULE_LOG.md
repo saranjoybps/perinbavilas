@@ -352,5 +352,29 @@ services/family/
   pdf-service.ts                   ← PDF generation
 
 types/family.ts                    ← TypeScript interfaces
-vercel.json                        ← NEW: Vercel deployment config
+vercel.json                        ← Vercel deployment config
 ```
+
+---
+
+## 13. Session 3 — Vercel 404 Fix & Dev Cleanup
+
+### Vercel Deployment 404s
+
+**Problem:** All pages (dashboard, admin, API routes) returned 404 on Vercel deployment. Worked locally after deleting `.next/`.
+
+**Root Cause:** `.gitignore` had `admin/` (bare pattern) which matches **any** `admin/` directory at any depth — including `app/admin/`. All 8 files in `app/admin/` were never committed to git, so Vercel had no admin pages.
+
+**Fix:**
+1. `.gitignore` line 36: `admin/` → `/admin/` (root-level only)
+2. `tsconfig.json` exclude: `"admin"` → `"/admin"` (same fix for TypeScript compiler)
+3. Removed redundant `jsconfig.json` (already covered by `tsconfig.json`)
+4. Ran `git add app/admin/` to track all 8 admin files
+
+### TypeScript Auto-Install on `npm run dev`
+
+**Problem:** Every cold start of `next dev --turbopack` showed "It looks like you're trying to use TypeScript but do not have the required package(s) installed" and ran `npm install typescript`.
+
+**Cause:** Known Next.js 16 behavior — detects `tsconfig.json`, checks for `typescript` package, triggers `npm install typescript`. npm then says "up to date" since it's already in `devDependencies`.
+
+**Resolution:** This is cosmetic only. npm moves `typescript` back to `devDependencies` whenever it's placed in `dependencies`. The auto-install check cannot be suppressed. It does **not** affect Vercel builds (which run `next build`, not `next dev`).
