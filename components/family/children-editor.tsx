@@ -2,6 +2,7 @@
 
 import { Child } from "@/types/family";
 import { useState } from "react";
+import { DatePicker } from "./date-picker";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent,
 } from "@dnd-kit/core";
@@ -60,13 +61,13 @@ function SortableRow({ child, index, onUpdate, onDelete }: { child: Child; index
         <button {...attributes} {...listeners} style={{ cursor: 'grab', background: 'none', border: 'none', color: 'rgba(26,16,8,0.35)', fontSize: '0.85rem' }}>⋮⋮</button>
       </td>
       <td style={tdStyle}>
-        <input style={{ ...inputStyle, fontFamily: 'var(--font-inter)', fontSize: '0.72rem', background: 'rgba(212,175,55,0.06)', cursor: 'default' }} value={child.code} readOnly placeholder="Code" />
+        <input style={inputStyle} value={child.code} onChange={(e) => onUpdate(index, { ...child, code: e.target.value })} placeholder="Code" />
       </td>
       <td style={tdStyle}>
         <input style={inputStyle} value={child.name} onChange={(e) => onUpdate(index, { ...child, name: e.target.value })} placeholder="Name" />
       </td>
       <td style={tdStyle}>
-        <input style={inputStyle} value={child.dob || ""} onChange={(e) => onUpdate(index, { ...child, dob: e.target.value || null })} placeholder="DOB" />
+        <DatePicker value={child.dob} onChange={(v) => onUpdate(index, { ...child, dob: v })} />
       </td>
       <td style={{ ...tdStyle, width: '2.5rem' }}>
         <button

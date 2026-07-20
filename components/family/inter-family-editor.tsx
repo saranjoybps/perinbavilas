@@ -10,6 +10,7 @@ import { addFamily, getFamilies } from "@/lib/api";
 import { deleteImage, uploadImage } from "@/services/family/image-service";
 import { ChildrenEditor } from "./children-editor";
 import { PhotoUpload } from "./photo-upload";
+import { DatePicker } from "./date-picker";
 
 const familySchema = z.object({
   code: z.string().min(1, "Code is required"),
@@ -454,11 +455,11 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
                   </div>
                   <div>
                     <label style={labelStyle}>Date of Birth</label>
-                    <input style={inputStyle} value={watch("dob") || ""} onChange={(e) => setValue("dob", e.target.value || null)} />
+                    <DatePicker value={watch("dob")} onChange={(v) => setValue("dob", v)} />
                   </div>
                   <div>
                     <label style={labelStyle}>Date of Death</label>
-                    <input style={inputStyle} value={watch("dod") || ""} onChange={(e) => setValue("dod", e.target.value || null)} />
+                    <DatePicker value={watch("dod")} onChange={(v) => setValue("dod", v)} />
                   </div>
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label style={labelStyle}>Family Name</label>
@@ -495,11 +496,11 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
                   </div>
                   <div>
                     <label style={labelStyle}>Spouse DOB</label>
-                    <input style={inputStyle} value={watch("spouseDob") || ""} onChange={(e) => setValue("spouseDob", e.target.value || null)} />
+                    <DatePicker value={watch("spouseDob")} onChange={(v) => setValue("spouseDob", v)} />
                   </div>
                   <div>
                     <label style={labelStyle}>Spouse DOD</label>
-                    <input style={inputStyle} value={watch("spouseDod") || ""} onChange={(e) => setValue("spouseDod", e.target.value || null)} />
+                    <DatePicker value={watch("spouseDod")} onChange={(v) => setValue("spouseDod", v)} />
                   </div>
                 </div>
               )}
