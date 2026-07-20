@@ -118,46 +118,59 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
   const [allRecords, setAllRecords] = useState<FamilyRecord[]>([]);
   const [selectedChildCode, setSelectedChildCode] = useState<string>("");
 
-  const getDefaults = (r?: FamilyRecord): FamilyFormValues => ({
-    code: r?.code || "",
-    name: r?.name || "",
-    dob: r?.dob || null,
-    dod: r?.dod || null,
-    family_name: r?.family_name || null,
-    address: r?.address || null,
-    cell_numbers: r?.cell_numbers || [],
-    landline: r?.landline || null,
-    email: r?.email || null,
-    occupation: r?.occupation || null,
-    spouseName: r?.spouse?.name || "",
-    spouseDob: r?.spouse?.dob || null,
-    spouseDod: r?.spouse?.dod || null,
-    children: r?.children || [],
-    photos: r?.photos || [],
-  });
-
   const form = useForm<FamilyFormValues>({
     resolver: zodResolver(familySchema),
-    defaultValues: getDefaults(record),
+    defaultValues: { code: "", name: "", dob: null, dod: null, family_name: null, address: null, cell_numbers: [], landline: null, email: null, occupation: null, spouseName: "", spouseDob: null, spouseDod: null, children: [], photos: [] },
   });
 
   const { reset, watch, setValue, register, handleSubmit, formState: { errors } } = form;
   const isEditing = !!record;
 
   useEffect(() => {
-    if (open) {
-      const defaults = getDefaults(record);
-      reset(defaults);
-      setOriginalPhotos(defaults.photos);
-      setActiveTab("basic");
-      pendingUploadsRef.current = new Map();
-      removedOriginalsRef.current = new Set();
-      setParentCode("");
-      if (!record) {
-        getFamilies().then(setAllRecords).catch(() => setAllRecords([]));
-      }
+    if (!open) return;
+    if (record) {
+      setValue("code", record.code);
+      setValue("name", record.name);
+      setValue("dob", record.dob ?? null);
+      setValue("dod", record.dod ?? null);
+      setValue("family_name", record.family_name ?? null);
+      setValue("address", record.address ?? null);
+      setValue("cell_numbers", record.cell_numbers ?? []);
+      setValue("landline", record.landline ?? null);
+      setValue("email", record.email ?? null);
+      setValue("occupation", record.occupation ?? null);
+      setValue("spouseName", record.spouse?.name ?? "");
+      setValue("spouseDob", record.spouse?.dob ?? null);
+      setValue("spouseDod", record.spouse?.dod ?? null);
+      setValue("children", record.children ?? []);
+      setValue("photos", record.photos ?? []);
+      setOriginalPhotos(record.photos ?? []);
+    } else {
+      setValue("code", "");
+      setValue("name", "");
+      setValue("dob", null);
+      setValue("dod", null);
+      setValue("family_name", null);
+      setValue("address", null);
+      setValue("cell_numbers", []);
+      setValue("landline", null);
+      setValue("email", null);
+      setValue("occupation", null);
+      setValue("spouseName", "");
+      setValue("spouseDob", null);
+      setValue("spouseDod", null);
+      setValue("children", []);
+      setValue("photos", []);
+      setOriginalPhotos([]);
     }
-  }, [open, record, reset]);
+    setActiveTab("basic");
+    pendingUploadsRef.current = new Map();
+    removedOriginalsRef.current = new Set();
+    setParentCode("");
+    if (!record) {
+      getFamilies().then(setAllRecords).catch(() => setAllRecords([]));
+    }
+  }, [open, record, setValue]);
 
   const handleOpenChange = useCallback((o: boolean) => {
     if (!o) reset();
@@ -189,9 +202,14 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
   }, [setValue]);
 
   const handleChildSelect = useCallback((childCode: string) => {
+    const child = childrenOfParent.find((c) => c.code === childCode);
     setSelectedChildCode(childCode);
     setValue("code", childCode);
-  }, [setValue]);
+    if (child) {
+      setValue("name", child.name);
+      setValue("dob", child.dob ?? null);
+    }
+  }, [childrenOfParent, setValue]);
 
   const onSubmit = async (values: FamilyFormValues) => {
     try {

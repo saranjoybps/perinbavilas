@@ -43,6 +43,21 @@ function recordToFamilyRecord(doc: FirebaseFirestore.DocumentSnapshot): FamilyRe
   };
 }
 
+function hydrateChildrenFromRecords(record: FamilyRecord, recordMap: Map<string, FamilyRecord>): FamilyRecord {
+  return {
+    ...record,
+    children: (record.children || []).map((child) => {
+      const childRecord = recordMap.get(child.code);
+      return {
+        ...child,
+        name: child.name || childRecord?.name || '',
+        dob: child.dob || childRecord?.dob || null,
+        dod: child.dod || childRecord?.dod || null,
+      };
+    }),
+  };
+}
+
 export async function loadAllRecords(): Promise<FamilyRecord[]> {
   const now = Date.now();
   if (cachedRecords && now - lastLoadTime < CACHE_TTL) {
@@ -62,6 +77,12 @@ export async function loadAllRecords(): Promise<FamilyRecord[]> {
 
     const recordMap = new Map<string, FamilyRecord>();
     for (const r of allRecords) {
+      recordMap.set(r.code, r);
+    }
+
+    for (const r of allRecords) {
+      const hydrated = hydrateChildrenFromRecords(r, recordMap);
+      Object.assign(r, hydrated);
       recordMap.set(r.code, r);
     }
 
@@ -229,7 +250,7 @@ export async function createRecord(data: FamilyMember): Promise<FamilyRecord> {
       const existingChildren = parentData.children || [];
       if (!existingChildren.some((c: any) => c.code === data.code)) {
         await adminDb.collection(COLLECTION_NAME).doc(parentId).update({
-          children: [...existingChildren, { code: data.code, name: data.name, dob: null, dod: null }],
+          children: [...existingChildren, { code: data.code, name: data.name, dob: data.dob || null, dod: data.dod || null }],
         });
       }
     }

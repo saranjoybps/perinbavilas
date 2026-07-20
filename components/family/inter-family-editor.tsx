@@ -146,26 +146,39 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
 
   const form = useForm<FamilyFormValues>({
     resolver: zodResolver(familySchema),
-    defaultValues: getDefaults(),
+    defaultValues: { code: "", name: "", dob: null, dod: null, family_name: null, address: null, cell_numbers: [], landline: null, email: null, occupation: null, spouseName: "", spouseDob: null, spouseDod: null, children: [], photos: [] },
   });
 
   const { reset, watch, setValue, register, handleSubmit, formState: { errors } } = form;
 
   useEffect(() => {
-    if (open) {
-      reset(getDefaults());
-      setOriginalPhotos([]);
-      setActiveTab("basic");
-      pendingUploadsRef.current = new Map();
-      removedOriginalsRef.current = new Set();
-      setSelectedParent1("");
-      setSelectedParent2("");
-      setSelectedChild1("");
-      setSelectedChild2("");
-      setLoading(true);
-      getFamilies().then(setAllRecords).catch(() => setAllRecords([])).finally(() => setLoading(false));
-    }
-  }, [open, reset]);
+    if (!open) return;
+    setValue("code", "");
+    setValue("name", "");
+    setValue("dob", null);
+    setValue("dod", null);
+    setValue("family_name", null);
+    setValue("address", null);
+    setValue("cell_numbers", []);
+    setValue("landline", null);
+    setValue("email", null);
+    setValue("occupation", null);
+    setValue("spouseName", "");
+    setValue("spouseDob", null);
+    setValue("spouseDod", null);
+    setValue("children", []);
+    setValue("photos", []);
+    setOriginalPhotos([]);
+    setActiveTab("basic");
+    pendingUploadsRef.current = new Map();
+    removedOriginalsRef.current = new Set();
+    setSelectedParent1("");
+    setSelectedParent2("");
+    setSelectedChild1("");
+    setSelectedChild2("");
+    setLoading(true);
+    getFamilies().then(setAllRecords).catch(() => setAllRecords([])).finally(() => setLoading(false));
+  }, [open, setValue]);
 
   const handleOpenChange = useCallback((o: boolean) => {
     if (!o) reset();

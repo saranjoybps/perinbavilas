@@ -148,6 +148,7 @@ export default function FamilyPage() {
       )}
 
       <FamilyEditor
+        key={editRecord?.code ?? 'new'}
         record={editRecord}
         open={editorOpen}
         onOpenChange={setEditorOpen}
