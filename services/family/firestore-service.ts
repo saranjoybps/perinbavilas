@@ -8,7 +8,7 @@ const COLLECTION_NAME = 'families';
 
 let cachedRecords: FamilyRecord[] | null = null;
 let lastLoadTime = 0;
-const CACHE_TTL = 5000;
+const CACHE_TTL = 300000;
 
 function sanitizeDocId(code: string): string {
   return code.replace(/\//g, '-');
@@ -161,11 +161,13 @@ export async function getRecordByCode(code: string): Promise<FamilyRecord | null
 }
 
 export async function createRecord(data: FamilyMember): Promise<FamilyRecord> {
-  const records = await loadAllRecords();
-
-  if (records.some(r => r.code === data.code)) {
+  const docId = sanitizeDocId(data.code);
+  const existingDoc = await adminDb.collection(COLLECTION_NAME).doc(docId).get();
+  if (existingDoc.exists) {
     throw new Error(`Duplicate code: ${data.code} already exists`);
   }
+
+  const records = await loadAllRecords();
 
   const recordMap = new Map<string, FamilyRecord>();
   for (const r of records) {
@@ -216,8 +218,11 @@ export async function createRecord(data: FamilyMember): Promise<FamilyRecord> {
     }
   }
 
-  const docId = sanitizeDocId(data.code);
-  const maxOrder = records.reduce((max, r) => Math.max(max, r._fileOrder), 0);
+  const maxOrderSnapshot = await adminDb.collection(COLLECTION_NAME)
+    .orderBy('_fileOrder', 'desc')
+    .limit(1)
+    .get();
+  const maxOrder = maxOrderSnapshot.empty ? 0 : (maxOrderSnapshot.docs[0].data()._fileOrder || 0);
 
   const newRecord: FamilyRecord = {
     ...data,
@@ -261,15 +266,16 @@ export async function createRecord(data: FamilyMember): Promise<FamilyRecord> {
 }
 
 export async function updateRecord(code: string, updates: Partial<FamilyMember>): Promise<FamilyRecord> {
-  const records = await loadAllRecords();
-  const existing = records.find(r => r.code === code);
-
+  const existing = await getRecordByCode(code);
   if (!existing) {
     throw new Error(`Record not found: ${code}`);
   }
 
-  if (updates.code && updates.code !== code && records.some(r => r.code === updates.code)) {
-    throw new Error(`Duplicate code: ${updates.code} already exists`);
+  if (updates.code && updates.code !== code) {
+    const dupDoc = await adminDb.collection(COLLECTION_NAME).doc(sanitizeDocId(updates.code)).get();
+    if (dupDoc.exists) {
+      throw new Error(`Duplicate code: ${updates.code} already exists`);
+    }
   }
 
   const docId = sanitizeDocId(code);
@@ -310,9 +316,7 @@ export async function updateRecord(code: string, updates: Partial<FamilyMember>)
 }
 
 export async function deleteRecord(code: string): Promise<void> {
-  const records = await loadAllRecords();
-  const record = records.find(r => r.code === code);
-
+  const record = await getRecordByCode(code);
   if (!record) {
     throw new Error(`Record not found: ${code}`);
   }
@@ -328,23 +332,26 @@ export async function deleteRecord(code: string): Promise<void> {
 }
 
 export async function duplicateRecord(code: string): Promise<FamilyRecord> {
-  const records = await loadAllRecords();
-  const original = records.find(r => r.code === code);
-
+  const original = await getRecordByCode(code);
   if (!original) {
     throw new Error(`Record not found: ${code}`);
   }
 
-  const newCode = `${code}_copy`;
+  let finalCode = `${code}_copy`;
   let counter = 1;
-  let finalCode = newCode;
-  while (records.some(r => r.code === finalCode)) {
+  while (true) {
+    const dupDoc = await adminDb.collection(COLLECTION_NAME).doc(sanitizeDocId(finalCode)).get();
+    if (!dupDoc.exists) break;
     finalCode = `${code}_copy_${counter}`;
     counter++;
   }
 
   const docId = sanitizeDocId(finalCode);
-  const maxOrder = records.reduce((max, r) => Math.max(max, r._fileOrder), 0);
+  const maxOrderSnapshot = await adminDb.collection(COLLECTION_NAME)
+    .orderBy('_fileOrder', 'desc')
+    .limit(1)
+    .get();
+  const maxOrder = maxOrderSnapshot.empty ? 0 : (maxOrderSnapshot.docs[0].data()._fileOrder || 0);
 
   const newRecord: FamilyRecord = {
     ...original,
@@ -388,20 +395,23 @@ export async function exportAllAsJson(): Promise<string> {
 }
 
 export async function undoDelete(code: string, backupContent: string): Promise<void> {
-  const records = await loadAllRecords();
+  const existingDoc = await adminDb.collection(COLLECTION_NAME).doc(sanitizeDocId(code)).get();
+  if (existingDoc.exists) {
+    throw new Error(`Code ${code} already exists. Cannot restore.`);
+  }
+
   const data = JSON.parse(backupContent) as FamilyMember[];
   const restored = data.find(r => r.code === code);
-
   if (!restored) {
     throw new Error(`Record not found in backup: ${code}`);
   }
 
-  if (records.some(r => r.code === code)) {
-    throw new Error(`Code ${code} already exists. Cannot restore.`);
-  }
-
   const docId = sanitizeDocId(code);
-  const maxOrder = records.reduce((max, r) => Math.max(max, r._fileOrder), 0);
+  const maxOrderSnapshot = await adminDb.collection(COLLECTION_NAME)
+    .orderBy('_fileOrder', 'desc')
+    .limit(1)
+    .get();
+  const maxOrder = maxOrderSnapshot.empty ? 0 : (maxOrderSnapshot.docs[0].data()._fileOrder || 0);
 
   const newRecord: FamilyRecord = {
     ...restored,
@@ -426,59 +436,78 @@ export async function undoDelete(code: string, backupContent: string): Promise<v
   cachedRecords = null;
 }
 
-export async function generateNextCode(parentCode: string, spouseFamilyCode?: string): Promise<string> {
-  const records = await loadAllRecords();
+function queryByPrefix(prefix: string): Promise<FirebaseFirestore.QuerySnapshot> {
+  return adminDb.collection(COLLECTION_NAME)
+    .where('code', '>=', prefix)
+    .where('code', '<', prefix + '\uf8ff')
+    .select('code')
+    .get();
+}
 
+export async function generateNextCode(parentCode: string, spouseFamilyCode?: string): Promise<string> {
   if (parentCode.includes('/')) {
     const [leftSide, rightSide] = parentCode.split('/');
-    const directChildren = records.filter(r => {
-      if (!r.code.includes('/')) return false;
-      const [childLeft] = r.code.split('/');
-      return childLeft.startsWith(leftSide) && childLeft.length === leftSide.length + 1;
-    });
+    const childPrefix = leftSide.slice(0, -1);
+    const snapshot = await queryByPrefix(childPrefix);
+    const directChildren = snapshot.docs
+      .map(d => d.data().code as string)
+      .filter(c => {
+        if (!c.includes('/')) return false;
+        const [childLeft] = c.split('/');
+        return childLeft.startsWith(leftSide) && childLeft.length === leftSide.length + 1;
+      });
 
     if (directChildren.length === 0) {
       return `${leftSide}1/${rightSide}1`;
     }
 
-    const maxChildNum = Math.max(...directChildren.map(r => {
-      const [childLeft] = r.code.split('/');
+    const maxChildNum = Math.max(...directChildren.map(c => {
+      const [childLeft] = c.split('/');
       return parseInt(childLeft.slice(-1), 10);
     }));
     return `${leftSide}${maxChildNum + 1}/${rightSide}${maxChildNum + 1}`;
   }
 
   if (spouseFamilyCode) {
-    const directChildren = records.filter(r => {
-      if (!r.code.includes('/')) return false;
-      const [childLeft] = r.code.split('/');
-      return childLeft.startsWith(parentCode) && childLeft.length === parentCode.length + 1;
-    });
+    const snapshot = await queryByPrefix(parentCode);
+    const directChildren = snapshot.docs
+      .map(d => d.data().code as string)
+      .filter(c => {
+        if (!c.includes('/')) return false;
+        const [childLeft] = c.split('/');
+        return childLeft.startsWith(parentCode) && childLeft.length === parentCode.length + 1;
+      });
 
     if (directChildren.length === 0) {
       return `${parentCode}1/${spouseFamilyCode}1`;
     }
 
-    const maxChildNum = Math.max(...directChildren.map(r => {
-      const [childLeft] = r.code.split('/');
+    const maxChildNum = Math.max(...directChildren.map(c => {
+      const [childLeft] = c.split('/');
       return parseInt(childLeft.slice(-1), 10);
     }));
     return `${parentCode}${maxChildNum + 1}/${spouseFamilyCode}${maxChildNum + 1}`;
   }
 
-  const directChildren = records.filter(r => {
-    return r.code.startsWith(parentCode) && r.code.length === parentCode.length + 1 && r.code !== parentCode;
-  });
+  const snapshot = await queryByPrefix(parentCode);
+  const directChildren = snapshot.docs
+    .map(d => d.data().code as string)
+    .filter(c => c.startsWith(parentCode) && c.length === parentCode.length + 1 && c !== parentCode);
 
   if (directChildren.length === 0) {
     return `${parentCode}1`;
   }
 
-  const maxChildNum = Math.max(...directChildren.map(r => parseInt(r.code.slice(-1), 10)));
+  const maxChildNum = Math.max(...directChildren.map(c => parseInt(c.slice(-1), 10)));
   return `${parentCode}${maxChildNum + 1}`;
 }
 
 export async function getChildSuggestions(): Promise<{ code: string; name: string }[]> {
-  const records = await loadAllRecords();
-  return records.map(r => ({ code: r.code, name: r.name }));
+  const snapshot = await adminDb.collection(COLLECTION_NAME)
+    .select('code', 'name')
+    .get();
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return { code: data.code || doc.id, name: data.name || '' };
+  });
 }

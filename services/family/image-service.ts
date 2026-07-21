@@ -25,7 +25,7 @@ function extractPublicId(cloudinaryUrl: string): string | null {
 }
 
 function generatePhotoFilename(familyCode: string, existingPhotos: string[]): string {
-  const baseName = familyCode;
+  const baseName = familyCode.replace(/\//g, '-');
   const existingFilenames = new Set(
     existingPhotos
       .map(url => {

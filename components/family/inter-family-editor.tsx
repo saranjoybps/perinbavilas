@@ -531,7 +531,8 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
               {activeTab === 'photos' && (
                 <div style={{ marginBottom: '1.25rem' }}>
                   <PhotoUpload
-                    value={watch("photos")}
+                    photos={watch("photos")}
+                    familyCode={watch("code")}
                     onChange={(photos) => setValue("photos", photos)}
                     onPendingUpload={handlePendingUpload}
                     onPendingRemove={handlePendingRemove}

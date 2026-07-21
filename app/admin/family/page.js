@@ -61,8 +61,7 @@ export default function FamilyPage() {
   }, []);
 
   const handleSaved = useCallback(() => {
-    refresh();
-  }, [refresh]);
+  }, []);
 
   return (
     <div>
@@ -103,6 +102,14 @@ export default function FamilyPage() {
             Export PDF
           </button>
         </PdfPreview>
+        <button
+          style={btnBase}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+          onClick={refresh}
+        >
+          ⟳ Refresh
+        </button>
         <button
           style={{ ...btnBase, color: '#FFF7ED', background: '#C49B1A' }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#b38b17'; }}
