@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { getAnnouncements } from '@/lib/firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
+import { formatDate } from '@/lib/formatters';
 
 export default function AnnouncementsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -41,7 +42,7 @@ export default function AnnouncementsPage() {
             <div key={item.id} className="glass-warm shadow-cloud p-5 md:p-7" style={{ borderLeft: '3px solid rgba(212,175,55,0.45)' }}>
               <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.65rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.6)', marginBottom: '0.5rem' }}>
                 {item.createdAt?.toDate
-                  ? item.createdAt.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                  ? formatDate(item.createdAt)
                   : ''}
               </p>
               <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1rem', color: '#1A1008', fontWeight: 400, marginBottom: '0.6rem' }}>

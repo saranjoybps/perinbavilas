@@ -1,6 +1,7 @@
 "use client";
 
 import { FamilyRecord } from "@/types/family";
+import { formatDate, formatName } from "@/lib/formatters";
 
 const inputStyle = {
   width: '100%',
@@ -60,7 +61,7 @@ export function FamilyViewDialog({ record, open, onOpenChange }: FamilyViewDialo
         onWheel={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
           <span style={codeBadge}>{record.code}</span>
-          <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.15rem', fontWeight: 400, color: '#1A1008' }}>{record.name}</span>
+          <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.15rem', fontWeight: 400, color: '#1A1008' }}>{formatName(record.name)}</span>
         </div>
 
         {record.photos && record.photos.length > 0 && (
@@ -75,8 +76,8 @@ export function FamilyViewDialog({ record, open, onOpenChange }: FamilyViewDialo
           <div>
             <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.62rem', letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.5rem' }}>Personal Details</p>
             <div style={{ fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: '#1A1008', lineHeight: 2 }}>
-              <div>DOB: <span style={{ color: 'rgba(26,16,8,0.55)' }}>{record.dob || 'N/A'}</span></div>
-              <div>DOD: <span style={{ color: 'rgba(26,16,8,0.55)' }}>{record.dod || 'N/A'}</span></div>
+              <div>DOB: <span style={{ color: 'rgba(26,16,8,0.55)' }}>{formatDate(record.dob) || 'N/A'}</span></div>
+              <div>DOD: <span style={{ color: 'rgba(26,16,8,0.55)' }}>{formatDate(record.dod) || 'N/A'}</span></div>
               {record.family_name && <div>Family: <span style={{ color: 'rgba(26,16,8,0.55)' }}>{record.family_name}</span></div>}
               {record.occupation && <div>Occupation: <span style={{ color: 'rgba(26,16,8,0.55)' }}>{record.occupation}</span></div>}
             </div>
@@ -86,9 +87,9 @@ export function FamilyViewDialog({ record, open, onOpenChange }: FamilyViewDialo
               <>
                 <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.62rem', letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.5rem' }}>Spouse</p>
                 <div style={{ fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: '#1A1008', lineHeight: 2 }}>
-                  <div style={{ fontWeight: 500 }}>{record.spouse.name}</div>
-                  {record.spouse.dob && <div style={{ color: 'rgba(26,16,8,0.55)' }}>DOB: {record.spouse.dob}</div>}
-                  {record.spouse.dod && <div style={{ color: 'rgba(26,16,8,0.55)' }}>DOD: {record.spouse.dod}</div>}
+                  <div style={{ fontWeight: 500 }}>{formatName(record.spouse.name)}</div>
+                  {record.spouse.dob && <div style={{ color: 'rgba(26,16,8,0.55)' }}>DOB: {formatDate(record.spouse.dob)}</div>}
+                  {record.spouse.dod && <div style={{ color: 'rgba(26,16,8,0.55)' }}>DOD: {formatDate(record.spouse.dod)}</div>}
                 </div>
               </>
             )}
@@ -126,8 +127,8 @@ export function FamilyViewDialog({ record, open, onOpenChange }: FamilyViewDialo
                   record.children.map((child) => (
                     <tr key={child.code} style={{ borderBottom: '1px solid rgba(212,175,55,0.08)' }}>
                       <td style={tdStyle}><span style={codeBadge}>{child.code}</span></td>
-                      <td style={tdStyle}>{child.name}</td>
-                      <td style={{ ...tdStyle, color: 'rgba(26,16,8,0.55)' }}>{child.dob || '—'}</td>
+                      <td style={tdStyle}>{formatName(child.name)}</td>
+                      <td style={{ ...tdStyle, color: 'rgba(26,16,8,0.55)' }}>{formatDate(child.dob) || '—'}</td>
                     </tr>
                   ))
                 )}

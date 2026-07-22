@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   background: 'rgba(255,255,255,0.72)',
@@ -29,18 +31,47 @@ function normalizeDate(val: string | null | undefined): string {
   return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
 }
 
+function toDisplayDate(val: string | null | undefined): string {
+  const normalized = normalizeDate(val);
+  if (!normalized) return "";
+  const [year, month, day] = normalized.split("-");
+  return `${day}-${month}-${year}`;
+}
+
+function toIsoDate(val: string): string | null {
+  const parts = val.trim().split("-");
+  if (parts.length !== 3) return null;
+  const [day, month, year] = parts;
+  if (!/^\d{1,2}$/.test(day) || !/^\d{1,2}$/.test(month) || !/^\d{4}$/.test(year)) return null;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  if (date.getFullYear() !== Number(year) || date.getMonth() !== Number(month) - 1 || date.getDate() !== Number(day)) return null;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
 interface DatePickerProps {
   value: string | null | undefined;
   onChange: (value: string | null) => void;
 }
 
 export function DatePicker({ value, onChange }: DatePickerProps) {
+  const [displayValue, setDisplayValue] = useState(() => toDisplayDate(value));
+
+  useEffect(() => {
+    setDisplayValue(toDisplayDate(value));
+  }, [value]);
+
   return (
     <input
-      type="date"
+      type="text"
+      inputMode="numeric"
+      placeholder="DD-MM-YYYY"
       style={inputStyle}
-      value={normalizeDate(value)}
-      onChange={(e) => onChange(e.target.value || null)}
+      value={displayValue}
+      onChange={(e) => {
+        const nextValue = e.target.value;
+        setDisplayValue(nextValue);
+        onChange(nextValue ? toIsoDate(nextValue) : null);
+      }}
     />
   );
 }

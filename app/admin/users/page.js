@@ -7,6 +7,7 @@ import { addUser, getAllUsers, updateUserRole, bulkImportUsers, deleteUser } fro
 import { useAuth } from '@/context/AuthContext';
 import * as XLSX from 'xlsx';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { formatName } from '@/lib/formatters';
 
 const ROLE_OPTIONS = ['member', 'admin', 'super_admin'];
 
@@ -488,7 +489,7 @@ export default function AdminUsersPage() {
             <div key={u.uid} className="glass-warm shadow-cloud p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="min-w-0">
                 <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: '#1A1008', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {u.displayName || 'Unnamed Member'}
+                  {formatName(u.displayName) || 'Unnamed Member'}
                 </p>
                 <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(26,16,8,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {u.email}

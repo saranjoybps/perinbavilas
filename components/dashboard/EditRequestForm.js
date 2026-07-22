@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { submitEditRequest } from '@/lib/firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
+import { formatDate } from '@/lib/formatters';
 
 const FIELDS = [
   { name: 'displayName', label: 'Full Name',   type: 'text'     },
@@ -25,7 +26,7 @@ export default function EditRequestForm({ currentData = {}, onSubmitted }) {
     profession:  currentData.profession  || '',
     location:    currentData.location    || '',
     address:     currentData.address     || '',
-    dateOfBirth: currentData.dateOfBirth || '',
+    dateOfBirth: formatDate(currentData.dateOfBirth),
     bio:         currentData.bio         || '',
   });
   const [status,  setStatus]  = useState('idle'); // idle | loading | success | error
@@ -85,7 +86,9 @@ export default function EditRequestForm({ currentData = {}, onSubmitted }) {
             />
           ) : (
             <input
-              type={f.type}
+              type={f.type === 'date' ? 'text' : f.type}
+              inputMode={f.type === 'date' ? 'numeric' : undefined}
+              placeholder={f.type === 'date' ? 'DD-MM-YYYY' : undefined}
               value={form[f.name]}
               onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
               style={{

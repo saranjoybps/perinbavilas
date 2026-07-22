@@ -28,7 +28,7 @@ const btnBase = {
 
 export default function FamilyPage() {
   const {
-    records, paginatedRecords, filteredRecords, loading, error, stats,
+    paginatedRecords, filteredRecords, loading, error, stats,
     filters, updateFilter, setSort, page, setPage, totalPages, refresh,
   } = useFamilies();
 
@@ -93,7 +93,7 @@ export default function FamilyPage() {
       </div>
 
       <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-        <PdfPreview records={records}>
+        <PdfPreview records={filteredRecords}>
           <button
             style={btnBase}
             onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}

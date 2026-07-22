@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { getEvents } from '@/lib/firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
+import { formatDate } from '@/lib/formatters';
 
 export default function EventsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -38,19 +39,17 @@ export default function EventsPage() {
       ) : (
         <div className="flex flex-col gap-5 max-w-2xl">
           {items.map((item) => {
-            const dateStr = item.date?.toDate
-              ? item.date.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-              : item.date || '';
+            const dateStr = formatDate(item.date);
             return (
               <div key={item.id} className="glass-warm shadow-cloud p-5 md:p-7" style={{ borderTop: '2px solid rgba(212,175,55,0.35)' }}>
                 <div className="flex items-start gap-2 md:gap-4">
                   {/* Date badge */}
                   <div className="shrink-0" style={{ minWidth: 42, textAlign: 'center', padding: '0.4rem 0.5rem', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)' }}>
                     <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.5rem', color: '#C49B1A', lineHeight: 1 }}>
-                      {item.date?.toDate ? item.date.toDate().getDate() : '—'}
+                      {item.date?.toDate ? String(item.date.toDate().getDate()).padStart(2, '0') : '—'}
                     </p>
                     <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(26,16,8,0.35)' }}>
-                      {item.date?.toDate ? item.date.toDate().toLocaleString('default', { month: 'short' }) : ''}
+                      {item.date?.toDate ? String(item.date.toDate().getMonth() + 1).padStart(2, '0') : ''}
                     </p>
                   </div>
 
@@ -58,6 +57,7 @@ export default function EventsPage() {
                     <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1rem', color: '#1A1008', fontWeight: 400, marginBottom: '0.3rem' }}>
                       {item.title}
                     </h2>
+                    {dateStr && <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(196,155,26,0.7)', marginBottom: '0.4rem' }}>{dateStr}</p>}
                     {item.location && (
                       <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(196,155,26,0.7)', marginBottom: '0.4rem' }}>
                         📍 {item.location}

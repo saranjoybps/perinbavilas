@@ -12,6 +12,7 @@ import {
   revokePdfAccessRequest,
 } from '@/lib/firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
+import { formatName } from '@/lib/formatters';
 
 const TABS = [
   { key: 'edit', label: 'Profile Edits' },
@@ -223,7 +224,7 @@ export default function AdminRequestsPage() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {req.displayName || 'Unnamed Member'}
+                        {formatName(req.displayName) || 'Unnamed Member'}
                       </p>
 
                       <p
@@ -470,7 +471,7 @@ export default function AdminRequestsPage() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {u.displayName || 'Unnamed Member'}
+                    {formatName(u.displayName) || 'Unnamed Member'}
                   </p>
 
                   <p

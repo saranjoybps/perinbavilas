@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { addFamily, updateFamily, getFamilies } from "@/lib/api";
 import { deleteImage, uploadImage } from "@/services/family/image-service";
 import { ChildrenEditor } from "./children-editor";
-import { PhotoUpload } from "./photo-upload";
+import { MAX_PHOTOS, PhotoUpload } from "./photo-upload";
 import { DatePicker } from "./date-picker";
 
 const familySchema = z.object({
@@ -113,7 +113,6 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
   const [originalPhotos, setOriginalPhotos] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("basic");
   const pendingUploadsRef = useRef<Map<string, File>>(new Map());
-  const removedOriginalsRef = useRef<Set<string>>(new Set());
   const [parentCode, setParentCode] = useState<string>("");
   const [allRecords, setAllRecords] = useState<FamilyRecord[]>([]);
   const [selectedChildCode, setSelectedChildCode] = useState<string>("");
@@ -126,9 +125,28 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
   const { reset, watch, setValue, register, handleSubmit, formState: { errors } } = form;
   const isEditing = !!record;
 
+  const clearPendingPreviews = useCallback(() => {
+    for (const previewUrl of pendingUploadsRef.current.keys()) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    pendingUploadsRef.current.clear();
+  }, []);
+
+  const normalizePhotos = useCallback((photos: string[] = []) => {
+    const seen = new Set<string>();
+    return photos.filter((photo): photo is string => {
+      if (typeof photo !== "string" || photo.length === 0 || seen.has(photo)) {
+        return false;
+      }
+      seen.add(photo);
+      return true;
+    });
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     if (record) {
+      clearPendingPreviews();
       setValue("code", record.code);
       setValue("name", record.name);
       setValue("dob", record.dob ?? null);
@@ -143,9 +161,11 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
       setValue("spouseDob", record.spouse?.dob ?? null);
       setValue("spouseDod", record.spouse?.dod ?? null);
       setValue("children", record.children ?? []);
-      setValue("photos", record.photos ?? []);
-      setOriginalPhotos(record.photos ?? []);
+      const photos = normalizePhotos(record.photos ?? []);
+      setValue("photos", photos);
+      setOriginalPhotos(photos);
     } else {
+      clearPendingPreviews();
       setValue("code", "");
       setValue("name", "");
       setValue("dob", null);
@@ -164,30 +184,31 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
       setOriginalPhotos([]);
     }
     setActiveTab("basic");
-    pendingUploadsRef.current = new Map();
-    removedOriginalsRef.current = new Set();
     setParentCode("");
     if (!record) {
       getFamilies().then(setAllRecords).catch(() => setAllRecords([]));
     }
-  }, [open, record, setValue]);
+  }, [clearPendingPreviews, normalizePhotos, open, record, setValue]);
 
   const handleOpenChange = useCallback((o: boolean) => {
-    if (!o) reset();
+    if (!o) {
+      clearPendingPreviews();
+      reset();
+    }
     onOpenChange?.(o);
-  }, [reset, onOpenChange]);
+  }, [clearPendingPreviews, reset, onOpenChange]);
 
   const handlePendingUpload = useCallback((file: File, previewUrl: string) => {
     pendingUploadsRef.current.set(previewUrl, file);
   }, []);
 
   const handlePendingRemove = useCallback((url: string) => {
-    if (originalPhotos.includes(url)) {
-      removedOriginalsRef.current.add(url);
-    } else {
+    const file = pendingUploadsRef.current.get(url);
+    if (file) {
       pendingUploadsRef.current.delete(url);
+      URL.revokeObjectURL(url);
     }
-  }, [originalPhotos]);
+  }, []);
 
   const childrenOfParent = useMemo(() => {
     if (!parentCode) return [];
@@ -212,26 +233,40 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
   }, [childrenOfParent, setValue]);
 
   const onSubmit = async (values: FamilyFormValues) => {
+    if (saving) return;
+
+    const selectedPhotos = normalizePhotos(values.photos);
+    const originalPhotoSet = new Set(originalPhotos);
+    const removedPhotos = originalPhotos.filter((url) => !selectedPhotos.includes(url));
+    const uploadedPhotos: string[] = [];
+    let familyData: FamilyMember | null = null;
+    let databaseUpdated = false;
+    let updatedCode = record?.code ?? values.code;
+    let successMessage = "";
+
+    if (selectedPhotos.length > MAX_PHOTOS) {
+      toast.error(`Maximum ${MAX_PHOTOS} photos allowed`);
+      return;
+    }
+
     try {
       setSaving(true);
 
-      for (const photoUrl of removedOriginalsRef.current) {
-        try { await deleteImage(photoUrl); } catch {}
-      }
-
       const finalPhotos: string[] = [];
-      for (const url of values.photos) {
+      for (const url of selectedPhotos) {
         const file = pendingUploadsRef.current.get(url);
         if (file) {
-          const { url: realUrl } = await uploadImage(values.code, file, []);
-          URL.revokeObjectURL(url);
+          const { url: realUrl } = await uploadImage(values.code, file, finalPhotos);
+          uploadedPhotos.push(realUrl);
           finalPhotos.push(realUrl);
-        } else {
+        } else if (originalPhotoSet.has(url)) {
           finalPhotos.push(url);
+        } else {
+          throw new Error("An image selection is no longer available. Please select it again.");
         }
       }
 
-      const familyData: FamilyMember = {
+      familyData = {
         code: values.code, name: values.name, dob: values.dob, dod: values.dod,
         family_name: values.family_name, address: values.address,
         cell_numbers: values.cell_numbers.filter(Boolean), landline: values.landline,
@@ -241,14 +276,43 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
       };
       if (isEditing && record) {
         await updateFamily(record.code, familyData);
-        toast.success("Family updated successfully");
+        updatedCode = values.code;
+        successMessage = "Family updated successfully";
       } else {
         await addFamily(familyData);
-        toast.success("Family created successfully");
+        updatedCode = values.code;
+        successMessage = "Family created successfully";
       }
+      databaseUpdated = true;
+
+      const failedRemovals: string[] = [];
+      for (const photoUrl of removedPhotos) {
+        try {
+          await deleteImage(photoUrl);
+        } catch {
+          failedRemovals.push(photoUrl);
+        }
+      }
+
+      if (failedRemovals.length > 0) {
+        const reconciledPhotos = [...finalPhotos, ...failedRemovals.filter((url) => !finalPhotos.includes(url))];
+        await updateFamily(updatedCode, { ...familyData, photos: reconciledPhotos });
+        throw new Error(`Family saved, but ${failedRemovals.length} removed image${failedRemovals.length === 1 ? '' : 's'} could not be deleted from Cloudinary and were kept on the record.`);
+      }
+
+      for (const previewUrl of pendingUploadsRef.current.keys()) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      pendingUploadsRef.current.clear();
+      toast.success(successMessage);
       onSave();
       onOpenChange?.(false);
     } catch (err: any) {
+      if (!databaseUpdated) {
+        for (const photoUrl of uploadedPhotos) {
+          try { await deleteImage(photoUrl); } catch {}
+        }
+      }
       toast.error(err.message || "Failed to save");
     } finally {
       setSaving(false);
@@ -433,8 +497,8 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
               onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
             >Cancel</button>
-            <button type="submit" style={btnPrimary}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#b38b17'; }}
+            <button type="submit" style={{ ...btnPrimary, opacity: saving ? 0.55 : 1, cursor: saving ? 'default' : 'pointer' }} disabled={saving}
+              onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#b38b17'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = '#C49B1A'; }}
             >{saving ? 'Saving...' : isEditing ? 'Update' : 'Create'}</button>
           </div>

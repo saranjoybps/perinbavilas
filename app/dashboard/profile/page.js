@@ -5,13 +5,14 @@ export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import EditRequestForm from '@/components/dashboard/EditRequestForm';
+import { formatDate, formatName } from '@/lib/formatters';
 
 export default function ProfilePage() {
   const { user, userData } = useAuth();
   const [editing, setEditing] = useState(false);
 
   const fields = [
-    { label: 'Full Name',  value: userData?.displayName || user?.displayName || '—' },
+    { label: 'Full Name',  value: formatName(userData?.displayName || user?.displayName) || '—' },
     { label: 'Email',      value: user?.email || '—'                                 },
     { label: 'Code',       value: userData?.code       || '—'                        },
     { label: 'Phone',      value: userData?.phone       || '—'                       },
@@ -19,7 +20,7 @@ export default function ProfilePage() {
     { label: 'Profession', value: userData?.profession  || '—'                       },
     { label: 'Location',   value: userData?.location    || '—'                       },
     { label: 'Address',    value: userData?.address     || '—'                       },
-    { label: 'Date of Birth', value: userData?.dateOfBirth || '—'                    },
+    { label: 'Date of Birth', value: formatDate(userData?.dateOfBirth) || '—'        },
     { label: 'Role',       value: userData?.role        || 'member'                  },
   ];
 

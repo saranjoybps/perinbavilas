@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { getAnnouncements, getEvents, getFamilyMembers } from '@/lib/firebase/firestore';
+import { formatName } from '@/lib/formatters';
 
 const STAT_LINKS = [
   { label: 'Family Members', key: 'members', href: '/dashboard/family',        icon: '◉', color: '#C49B1A' },
@@ -35,7 +36,7 @@ export default function DashboardPage() {
     load();
   }, [loading, user]);
 
-  const firstName = (userData?.displayName || user?.displayName || 'there').split(' ')[0];
+  const firstName = formatName(userData?.displayName || user?.displayName || 'there').split(' ')[0];
 
   return (
     <>

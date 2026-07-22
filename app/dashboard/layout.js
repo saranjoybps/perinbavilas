@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { signOutUser } from '@/lib/firebase/auth';
+import { formatName } from '@/lib/formatters';
 
 const NAV = [
   { label: 'Overview',      href: '/dashboard',               icon: '◇' },
@@ -97,7 +98,7 @@ export default function DashboardLayout({ children }) {
       {/* User + signout */}
       <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(212,175,55,0.12)', marginTop: 'auto' }}>
         <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: '#1A1008', fontWeight: 500, marginBottom: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {userData?.displayName || user.displayName || 'Family Member'}
+          {formatName(userData?.displayName || user.displayName) || 'Family Member'}
         </p>
         <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', color: 'rgba(26,16,8,0.35)', marginBottom: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {user.email}

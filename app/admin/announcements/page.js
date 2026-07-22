@@ -7,6 +7,7 @@ import { getAnnouncements, addAnnouncement, updateAnnouncement, deleteAnnounceme
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { formatDate } from '@/lib/formatters';
 
 export default function AdminAnnouncementsPage() {
   const { loading: authLoading, isAdmin } = useAuth();
@@ -136,7 +137,7 @@ export default function AdminAnnouncementsPage() {
                 <div className="min-w-0 flex-1">
                   <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.65rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.6)', marginBottom: '0.5rem' }}>
                     {item.createdAt?.toDate
-                      ? item.createdAt.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                      ? formatDate(item.createdAt)
                       : ''}
                   </p>
                   <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1rem', color: '#1A1008', fontWeight: 400, marginBottom: '0.5rem' }}>{item.title}</h2>

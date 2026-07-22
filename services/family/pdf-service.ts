@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import { FamilyRecord } from '@/types/family';
+import { formatDate, formatName } from '@/lib/formatters';
 import {
   PDFDocument,
   PDFFont,
@@ -158,12 +159,12 @@ function formatPhoneNumbers(record: FamilyRecord) {
 
 function buildDetailRows(record: FamilyRecord): DetailRow[] {
   const rows: DetailRow[] = [
-    { icon: 'icon-name', label: 'NAME', value: safeText(record.name).toUpperCase() },
-    { icon: 'icon-dob', label: 'DOB', value: safeText(record.dob).toUpperCase() },
-    { icon: 'icon-dod', label: 'DOD', value: safeText(record.dod).toUpperCase() },
-    { icon: 'icon-spouse', label: 'WO/HO', value: safeText(record.spouse?.name).toUpperCase() },
-    { icon: 'icon-dob', label: 'DOB', value: safeText(record.spouse?.dob).toUpperCase() },
-    { icon: 'icon-dod', label: 'DOD', value: safeText(record.spouse?.dod).toUpperCase() },
+    { icon: 'icon-name', label: 'NAME', value: formatName(safeText(record.name)).toUpperCase() },
+    { icon: 'icon-dob', label: 'DOB', value: formatDate(record.dob).toUpperCase() },
+    { icon: 'icon-dod', label: 'DOD', value: formatDate(record.dod).toUpperCase() },
+    { icon: 'icon-spouse', label: 'WO/HO', value: formatName(safeText(record.spouse?.name)).toUpperCase() },
+    { icon: 'icon-dob', label: 'DOB', value: formatDate(record.spouse?.dob).toUpperCase() },
+    { icon: 'icon-dod', label: 'DOD', value: formatDate(record.spouse?.dod).toUpperCase() },
     { icon: 'icon-phone', label: 'PHONE', value: formatPhoneNumbers(record).toUpperCase() },
     { icon: 'icon-telephone', label: 'TELEPHONE', value: safeText(record.landline).toUpperCase() },
     { icon: 'icon-address', label: 'ADDRESS', value: safeText(record.address).toUpperCase() },
@@ -197,7 +198,7 @@ function computeChildrenTableLayout(record: FamilyRecord, font: PDFFont, width: 
 
   const colWidths = getChildrenTableColumnWidths(width);
   const rowHeights = record.children.map((child) => {
-    const values = [safeText(child.code).toUpperCase(), safeText(child.name).toUpperCase(), safeText(child.dob).toUpperCase()];
+    const values = [safeText(child.code).toUpperCase(), formatName(safeText(child.name)).toUpperCase(), formatDate(child.dob).toUpperCase()];
     const maxLines = values.reduce((count, value, index) => (
       Math.max(count, wrapText(value, font, 8, colWidths[index] - 10).length)
     ), 1);
@@ -218,6 +219,8 @@ interface PhotoLayoutInfo {
   isHorizontal: boolean;
 }
 
+type PhotoInfo = PhotoLayoutInfo['photos'][number] & { isPortrait: boolean };
+
 async function calculatePhotoLayout(
   pdfDoc: PDFDocument,
   record: FamilyRecord,
@@ -228,7 +231,7 @@ async function calculatePhotoLayout(
     return { photos: [], layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
   }
 
-  const embeddedPhotos: Array<{ image: PDFImage; width: number; height: number }> = [];
+  const embeddedPhotos: PhotoInfo[] = [];
 
   for (const photoPath of photos.slice(0, 2)) {
     try {
@@ -238,7 +241,7 @@ async function calculatePhotoLayout(
       const drawW = origW * scale;
       const drawH = origH * scale;
       
-      embeddedPhotos.push({ image, width: drawW, height: drawH });
+      embeddedPhotos.push({ image, width: drawW, height: drawH, isPortrait: origH > origW });
     } catch {
       // Skip photos that can't be loaded
     }
@@ -249,6 +252,7 @@ async function calculatePhotoLayout(
   }
 
   if (embeddedPhotos.length === 2) {
+    const bothPortrait = embeddedPhotos.every((photo) => photo.isPortrait);
     const horizontalScale = Math.min(
       (PHOTO_AREA_WIDTH - PHOTO_GAP) / (embeddedPhotos[0].width + embeddedPhotos[1].width),
       1,
@@ -258,7 +262,7 @@ async function calculatePhotoLayout(
       width: photo.width * horizontalScale,
       height: photo.height * horizontalScale,
     }));
-    const canPlaceHorizontally = horizontalPhotos.every((photo) => photo.width >= PHOTO_MIN_HORIZONTAL_WIDTH);
+    const canPlaceHorizontally = !bothPortrait && horizontalPhotos.every((photo) => photo.width >= PHOTO_MIN_HORIZONTAL_WIDTH);
 
     if (canPlaceHorizontally) {
       return {
@@ -407,7 +411,14 @@ async function embedPhoto(pdfDoc: PDFDocument, photoPath: string) {
 }
 
 function getPhotos(record: FamilyRecord): string[] {
-  return record.photos?.filter(Boolean) ?? [];
+  const seen = new Set<string>();
+  return (record.photos ?? []).filter((photo): photo is string => {
+    if (typeof photo !== 'string' || photo.length === 0 || seen.has(photo)) {
+      return false;
+    }
+    seen.add(photo);
+    return true;
+  });
 }
 
 async function drawCodeBadge(
@@ -603,7 +614,7 @@ function drawChildrenTable(
       color: rowIndex % 2 === 0 ? WHITE : GREEN_PALE,
     });
 
-    const values = [safeText(child.code).toUpperCase(), safeText(child.name).toUpperCase(), safeText(child.dob).toUpperCase()];
+    const values = [safeText(child.code).toUpperCase(), formatName(safeText(child.name)).toUpperCase(), formatDate(child.dob).toUpperCase()];
     const sizes = [8, 8, 8];
     let valueX = tableX;
     for (let colIndex = 0; colIndex < values.length; colIndex += 1) {
@@ -891,5 +902,5 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
 }
 
 export async function exportSingleRecordPDF(record: FamilyRecord): Promise<Uint8Array> {
-  return generateFamilyDirectoryPDF([record], `Family Record - ${record.name}`);
+  return generateFamilyDirectoryPDF([record], `Family Record - ${formatName(record.name)}`);
 }

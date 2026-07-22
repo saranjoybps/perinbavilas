@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { addFamily, getFamilies } from "@/lib/api";
-import { deleteImage, uploadImage } from "@/services/family/image-service";
+import { deleteFamilyImages, deleteImage, uploadImage } from "@/services/family/image-service";
 import { ChildrenEditor } from "./children-editor";
 import { PhotoUpload } from "./photo-upload";
 import { DatePicker } from "./date-picker";
@@ -118,7 +118,6 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
   const [originalPhotos, setOriginalPhotos] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("basic");
   const pendingUploadsRef = useRef<Map<string, File>>(new Map());
-  const removedOriginalsRef = useRef<Set<string>>(new Set());
   const [allRecords, setAllRecords] = useState<FamilyRecord[]>([]);
   const [selectedParent1, setSelectedParent1] = useState<string>("");
   const [selectedParent2, setSelectedParent2] = useState<string>("");
@@ -151,6 +150,13 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
 
   const { reset, watch, setValue, register, handleSubmit, formState: { errors } } = form;
 
+  const clearPendingPreviews = useCallback(() => {
+    for (const previewUrl of pendingUploadsRef.current.keys()) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    pendingUploadsRef.current.clear();
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     setValue("code", "");
@@ -171,7 +177,6 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
     setOriginalPhotos([]);
     setActiveTab("basic");
     pendingUploadsRef.current = new Map();
-    removedOriginalsRef.current = new Set();
     setSelectedParent1("");
     setSelectedParent2("");
     setSelectedChild1("");
@@ -181,21 +186,24 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
   }, [open, setValue]);
 
   const handleOpenChange = useCallback((o: boolean) => {
-    if (!o) reset();
+    if (!o) {
+      clearPendingPreviews();
+      reset();
+    }
     onOpenChange?.(o);
-  }, [reset, onOpenChange]);
+  }, [clearPendingPreviews, reset, onOpenChange]);
 
   const handlePendingUpload = useCallback((file: File, previewUrl: string) => {
     pendingUploadsRef.current.set(previewUrl, file);
   }, []);
 
   const handlePendingRemove = useCallback((url: string) => {
-    if (originalPhotos.includes(url)) {
-      removedOriginalsRef.current.add(url);
-    } else {
+    const file = pendingUploadsRef.current.get(url);
+    if (file) {
       pendingUploadsRef.current.delete(url);
+      URL.revokeObjectURL(url);
     }
-  }, [originalPhotos]);
+  }, []);
 
   const parent1Children = useMemo(() => {
     if (!selectedParent1) return [];
@@ -240,22 +248,25 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
   }, [child2Data, setValue]);
 
   const onSubmit = async (values: FamilyFormValues) => {
+    const originalPhotoSet = new Set(originalPhotos);
+    const removedPhotos = originalPhotos.filter((url) => !values.photos.includes(url));
+    const uploadedPhotos: string[] = [];
+    let databaseUpdated = false;
+
     try {
       setSaving(true);
-
-      for (const photoUrl of removedOriginalsRef.current) {
-        try { await deleteImage(photoUrl); } catch {}
-      }
 
       const finalPhotos: string[] = [];
       for (const url of values.photos) {
         const file = pendingUploadsRef.current.get(url);
         if (file) {
-          const { url: realUrl } = await uploadImage(values.code, file, []);
-          URL.revokeObjectURL(url);
+          const { url: realUrl } = await uploadImage(values.code, file, finalPhotos);
+          uploadedPhotos.push(realUrl);
           finalPhotos.push(realUrl);
-        } else {
+        } else if (originalPhotoSet.has(url)) {
           finalPhotos.push(url);
+        } else {
+          throw new Error("An image selection is no longer available. Please select it again.");
         }
       }
 
@@ -268,10 +279,23 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
         children: values.children.map((c) => ({ code: c.code, name: c.name, dob: c.dob ?? null })),
       };
       await addFamily(familyData);
+      databaseUpdated = true;
+
+      await deleteFamilyImages(removedPhotos);
+
+      for (const previewUrl of pendingUploadsRef.current.keys()) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      pendingUploadsRef.current.clear();
       toast.success("Inter-family marriage record created");
       onSave();
       onOpenChange(false);
     } catch (err: any) {
+      if (!databaseUpdated) {
+        for (const photoUrl of uploadedPhotos) {
+          try { await deleteImage(photoUrl); } catch {}
+        }
+      }
       toast.error(err.message || "Failed to save");
     } finally {
       setSaving(false);

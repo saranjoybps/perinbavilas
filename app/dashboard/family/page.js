@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { getFamilyMembers } from '@/lib/firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
+import { formatName } from '@/lib/formatters';
 
 export default function FamilyPage() {
   const { user, loading: authLoading } = useAuth();
@@ -45,7 +46,7 @@ export default function FamilyPage() {
                 </span>
               </div>
               <h3 style={{ fontFamily: 'var(--font-playfair)', fontSize: '0.95rem', color: '#1A1008', marginBottom: '0.3rem', fontWeight: 400 }}>
-                {m.name || m.displayName}
+                {formatName(m.name || m.displayName)}
               </h3>
               {m.branch && (
                 <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(26,16,8,0.4)', marginBottom: '0.2rem' }}>

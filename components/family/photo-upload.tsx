@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from "react";
 
-const MAX_PHOTOS = 3;
+export const MAX_PHOTOS = 2;
 
 interface PhotoUploadProps {
   photos: string[];
@@ -79,6 +79,7 @@ export function PhotoUpload({ photos, familyCode, onChange, onPendingUpload, onP
               <>
                 <img src={photos[i]} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <button
+                  type="button"
                   onClick={() => handleDelete(i)}
                   style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', background: '#b03030', color: '#fff', border: 'none', borderRadius: '50%', width: '1.25rem', height: '1.25rem', cursor: 'pointer', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.8, transition: 'opacity 0.2s' }}
                   onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}

@@ -2,10 +2,11 @@
 
 import { v2 as cloudinary } from 'cloudinary';
 import sharp from 'sharp';
+import { randomUUID } from 'node:crypto';
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_IMAGES = 3;
+const MAX_IMAGES = 2;
 const CLOUDINARY_FOLDER = 'family-directory';
 
 cloudinary.config({
@@ -66,7 +67,8 @@ export async function uploadImage(
   }
 
   const filename = generatePhotoFilename(familyCode, existingPhotos);
-  const publicId = `${CLOUDINARY_FOLDER}/${filename.replace(/\.[^.]+$/, '')}`;
+  const uniqueSuffix = randomUUID().replace(/-/g, '').slice(0, 12);
+  const publicId = `${CLOUDINARY_FOLDER}/${filename.replace(/\.[^.]+$/, '')}-${uniqueSuffix}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -90,16 +92,23 @@ export async function deleteImage(cloudinaryUrl: string): Promise<void> {
   const publicId = extractPublicId(cloudinaryUrl);
   if (!publicId) return;
 
-  try {
-    await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
-  } catch {
-    // Image might not exist or already deleted
+  const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+  if (result.result !== 'ok' && result.result !== 'not found') {
+    throw new Error(`Cloudinary could not delete image ${publicId}`);
   }
 }
 
 export async function deleteFamilyImages(photos: string[]): Promise<void> {
+  const failures: string[] = [];
   for (const photoUrl of photos) {
-    await deleteImage(photoUrl);
+    try {
+      await deleteImage(photoUrl);
+    } catch {
+      failures.push(photoUrl);
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(`Could not delete ${failures.length} image${failures.length === 1 ? '' : 's'} from Cloudinary.`);
   }
 }
 

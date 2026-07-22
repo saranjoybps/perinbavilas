@@ -7,6 +7,15 @@ import { getEvents, addEvent, updateEvent, deleteEvent } from '@/lib/firebase/fi
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { formatDate } from '@/lib/formatters';
+
+function toIsoDate(value) {
+  const parts = value.trim().split('-');
+  if (parts.length !== 3) return value;
+  const [day, month, year] = parts;
+  if (!/^\d{1,2}$/.test(day) || !/^\d{1,2}$/.test(month) || !/^\d{4}$/.test(year)) return value;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
 
 export default function AdminEventsPage() {
   const { loading: authLoading, isAdmin } = useAuth();
@@ -42,14 +51,14 @@ export default function AdminEventsPage() {
       if (editingId) {
         await updateEvent(editingId, {
           title: form.title,
-          date: new Date(form.date),
+          date: new Date(toIsoDate(form.date)),
           location: form.location,
           description: form.description,
         });
       } else {
         await addEvent({
           title: form.title,
-          date: new Date(form.date),
+          date: new Date(toIsoDate(form.date)),
           location: form.location,
           description: form.description,
         });
@@ -105,7 +114,7 @@ export default function AdminEventsPage() {
           </div>
           <div>
             <label style={{ fontFamily: 'var(--font-inter)', fontSize: '0.65rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(26,16,8,0.4)', display: 'block', marginBottom: '0.4rem' }}>Date *</label>
-            <input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })}
+            <input type="text" inputMode="numeric" placeholder="DD-MM-YYYY" required value={formatDate(form.date)} onChange={(e) => setForm({ ...form, date: e.target.value })}
               style={{ width: '100%', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(212,175,55,0.22)', padding: '0.7rem 1rem', fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: '#1A1008', outline: 'none' }}
               onFocus={(e) => (e.target.style.borderColor = '#C49B1A')}
               onBlur={(e) => (e.target.style.borderColor = 'rgba(212,175,55,0.22)')}
@@ -164,16 +173,16 @@ export default function AdminEventsPage() {
         <div className="flex flex-col gap-4 max-w-2xl">
           {items.map((item) => {
             const dateObj = item.date?.toDate ? item.date.toDate() : null;
-            const dateStr = dateObj ? dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : item.date || '';
+            const dateStr = formatDate(dateObj || item.date);
             return (
               <div key={item.id} className="glass-warm shadow-cloud p-4 md:p-6" style={{ borderTop: '2px solid rgba(212,175,55,0.35)' }}>
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="flex items-start gap-2 md:gap-4 min-w-0 flex-1">
                     {dateObj && (
                       <div className="shrink-0" style={{ minWidth: 44, textAlign: 'center', padding: '0.4rem 0.5rem', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)' }}>
-                        <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.5rem', color: '#C49B1A', lineHeight: 1 }}>{dateObj.getDate()}</p>
+                        <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.5rem', color: '#C49B1A', lineHeight: 1 }}>{String(dateObj.getDate()).padStart(2, '0')}</p>
                         <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(26,16,8,0.35)' }}>
-                          {dateObj.toLocaleString('default', { month: 'short' })}
+                          {String(dateObj.getMonth() + 1).padStart(2, '0')}
                         </p>
                       </div>
                     )}
