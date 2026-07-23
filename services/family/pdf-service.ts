@@ -13,6 +13,7 @@ import {
   StandardFonts,
   rgb,
 } from 'pdf-lib';
+import { ImageLayoutResult, createImageLayout } from '@/services/family/image-layout-engine';
 
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
@@ -62,7 +63,6 @@ const PHOTO_AREA_WIDTH = 205;
 const PHOTO_SLOT_MAX_HEIGHT = 126;
 const PHOTO_GAP = 6;
 const PHOTO_DETAIL_GAP = 18;
-const PHOTO_MIN_HORIZONTAL_WIDTH = 72;
 
 type AssetName =
   | 'icon-name'
@@ -213,13 +213,14 @@ function computeChildrenTableLayout(record: FamilyRecord, font: PDFFont, width: 
 }
 
 interface PhotoLayoutInfo {
-  photos: Array<{ image: PDFImage; width: number; height: number }>;
+  photos: Array<{ id: string; image: PDFImage; width: number; height: number }>;
+  imageLayout: ImageLayoutResult | null;
   layoutWidth: number;
   layoutHeight: number;
   isHorizontal: boolean;
 }
 
-type PhotoInfo = PhotoLayoutInfo['photos'][number] & { isPortrait: boolean };
+type PhotoInfo = PhotoLayoutInfo['photos'][number];
 
 async function calculatePhotoLayout(
   pdfDoc: PDFDocument,
@@ -228,59 +229,38 @@ async function calculatePhotoLayout(
   const photos = getPhotos(record);
   
   if (photos.length === 0) {
-    return { photos: [], layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
+    return { photos: [], imageLayout: null, layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
   }
 
   const embeddedPhotos: PhotoInfo[] = [];
 
-  for (const photoPath of photos.slice(0, 2)) {
+  for (const [index, photoPath] of photos.slice(0, 2).entries()) {
     try {
       const { image, width: origW, height: origH } = await embedPhoto(pdfDoc, photoPath);
-
-      const scale = Math.min(PHOTO_AREA_WIDTH / origW, PHOTO_SLOT_MAX_HEIGHT / origH, 1);
-      const drawW = origW * scale;
-      const drawH = origH * scale;
       
-      embeddedPhotos.push({ image, width: drawW, height: drawH, isPortrait: origH > origW });
+      embeddedPhotos.push({ id: `${index}`, image, width: origW, height: origH });
     } catch {
       // Skip photos that can't be loaded
     }
   }
 
   if (embeddedPhotos.length === 0) {
-    return { photos: [], layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
+    return { photos: [], imageLayout: null, layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
   }
 
-  if (embeddedPhotos.length === 2) {
-    const bothPortrait = embeddedPhotos.every((photo) => photo.isPortrait);
-    const horizontalScale = Math.min(
-      (PHOTO_AREA_WIDTH - PHOTO_GAP) / (embeddedPhotos[0].width + embeddedPhotos[1].width),
-      1,
-    );
-    const horizontalPhotos = embeddedPhotos.map((photo) => ({
-      ...photo,
-      width: photo.width * horizontalScale,
-      height: photo.height * horizontalScale,
-    }));
-    const canPlaceHorizontally = !bothPortrait && horizontalPhotos.every((photo) => photo.width >= PHOTO_MIN_HORIZONTAL_WIDTH);
-
-    if (canPlaceHorizontally) {
-      return {
-        photos: horizontalPhotos,
-        layoutWidth: horizontalPhotos[0].width + PHOTO_GAP + horizontalPhotos[1].width,
-        layoutHeight: Math.max(horizontalPhotos[0].height, horizontalPhotos[1].height),
-        isHorizontal: true,
-      };
-    }
-  }
+  const imageLayout = createImageLayout(
+    embeddedPhotos.map((photo) => ({ id: photo.id, width: photo.width, height: photo.height })),
+    PHOTO_AREA_WIDTH,
+    PHOTO_SLOT_MAX_HEIGHT,
+    PHOTO_GAP,
+  );
 
   return {
     photos: embeddedPhotos,
-    layoutWidth: PHOTO_AREA_WIDTH,
-    layoutHeight: embeddedPhotos.reduce((height, photo, index) => (
-      height + photo.height + (index > 0 ? PHOTO_GAP : 0)
-    ), 0),
-    isHorizontal: false,
+    imageLayout,
+    layoutWidth: imageLayout.containerWidth,
+    layoutHeight: imageLayout.containerHeight,
+    isHorizontal: imageLayout.selectedLayout === 'side-by-side' || imageLayout.selectedLayout === 'portrait-beside-landscape',
   };
 }
 
@@ -458,32 +438,25 @@ async function drawPhotoPanel(
   x: number,
   yTop: number,
 ): Promise<{ width: number; height: number }> {
-  if (photoLayout.photos.length === 0) {
+  if (photoLayout.photos.length === 0 || !photoLayout.imageLayout) {
     return { width: 0, height: 0 };
   }
 
-  if (photoLayout.isHorizontal) {
-    let currentX = x + (PHOTO_AREA_WIDTH - photoLayout.layoutWidth) / 2;
-    for (const photo of photoLayout.photos) {
-      page.drawImage(photo.image, {
-        x: currentX,
-        y: yTop - photo.height,
-        width: photo.width,
-        height: photo.height,
-      });
-      currentX += photo.width + PHOTO_GAP;
+  const layoutBottomY = yTop - photoLayout.imageLayout.containerHeight;
+  const photosById = new Map(photoLayout.photos.map((photo) => [photo.id, photo]));
+
+  for (const placement of photoLayout.imageLayout.placements) {
+    const photo = photosById.get(placement.imageId);
+    if (!photo) {
+      continue;
     }
-  } else {
-    let currentY = yTop;
-    for (const photo of photoLayout.photos) {
-      page.drawImage(photo.image, {
-        x: x + (PHOTO_AREA_WIDTH - photo.width) / 2,
-        y: currentY - photo.height,
-        width: photo.width,
-        height: photo.height,
-      });
-      currentY -= photo.height + PHOTO_GAP;
-    }
+
+    page.drawImage(photo.image, {
+      x: x + placement.drawX,
+      y: layoutBottomY + placement.drawY,
+      width: placement.drawWidth,
+      height: placement.drawHeight,
+    });
   }
 
   return { width: photoLayout.layoutWidth, height: photoLayout.layoutHeight };

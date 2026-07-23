@@ -101,35 +101,43 @@ export async function loadAllRecords(): Promise<FamilyRecord[]> {
       return record?.code;
     }
 
-    const familyRoots = allRecords
-      .filter(r => /^[1-7]$/.test(r.code))
-      .sort((a, b) => a.code.localeCompare(b.code));
-
     const records: FamilyRecord[] = [];
     const visited = new Set<string>();
 
-    for (const root of familyRoots) {
-      const queue: string[] = [root.code];
-      while (queue.length > 0) {
-        const code = queue.shift()!;
-        const actualCode = getActualCode(code);
-        if (!actualCode || visited.has(actualCode)) continue;
+    const rootAncestor = recordMap.get('0');
+    if (rootAncestor) {
+      visited.add(rootAncestor.code);
+      records.push(rootAncestor);
+    }
 
-        const record = recordMap.get(actualCode);
-        if (record) {
-          visited.add(actualCode);
-          records.push(record);
-          const unvisitedChildren = (record.children || [])
-            .filter(child => {
-              const childActual = getActualCode(child.code);
-              return childActual && !visited.has(childActual);
-            })
-            .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
-          for (const child of unvisitedChildren) {
-            queue.push(child.code);
-          }
-        }
+    function visitHierarchy(code: string) {
+      const actualCode = getActualCode(code);
+      if (!actualCode || visited.has(actualCode)) return;
+
+      const record = recordMap.get(actualCode);
+      if (!record) return;
+
+      visited.add(actualCode);
+      records.push(record);
+
+      const unvisitedChildren = (record.children || [])
+        .filter(child => {
+          const childActual = getActualCode(child.code);
+          return childActual && !visited.has(childActual);
+        })
+        .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+
+      for (const child of unvisitedChildren) {
+        visitHierarchy(child.code);
       }
+    }
+
+    const familyRoots = allRecords
+      .filter(r => /^[1-7]$/.test(r.code))
+      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+
+    for (const root of familyRoots) {
+      visitHierarchy(root.code);
     }
 
     for (const r of allRecords) {

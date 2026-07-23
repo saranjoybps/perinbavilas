@@ -18,13 +18,17 @@ function normalizeDate(val: string | null | undefined): string {
   if (!val) return "";
   const datePart = val.trim().split("T")[0];
 
+  if (/^\d{4}$/.test(datePart)) {
+    return datePart;
+  }
+
   const isoParts = datePart.split("-");
   if (isoParts.length === 3 && isoParts[0].length === 4) {
     const [y, m, d] = isoParts;
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
 
-  const displayParts = datePart.split("-");
+  const displayParts = datePart.includes("/") ? datePart.split("/") : datePart.split("-");
   if (displayParts.length !== 3) return "";
   const [d, m, y] = displayParts;
   if (y.length !== 4) return "";
@@ -34,12 +38,16 @@ function normalizeDate(val: string | null | undefined): string {
 function toDisplayDate(val: string | null | undefined): string {
   const normalized = normalizeDate(val);
   if (!normalized) return "";
+  if (/^\d{4}$/.test(normalized)) return normalized;
   const [year, month, day] = normalized.split("-");
   return `${day}-${month}-${year}`;
 }
 
 function toIsoDate(val: string): string | null {
-  const parts = val.trim().split("-");
+  const trimmed = val.trim();
+  if (/^\d{4}$/.test(trimmed)) return trimmed;
+
+  const parts = trimmed.includes("/") ? trimmed.split("/") : trimmed.split("-");
   if (parts.length !== 3) return null;
   const [day, month, year] = parts;
   if (!/^\d{1,2}$/.test(day) || !/^\d{1,2}$/.test(month) || !/^\d{4}$/.test(year)) return null;
