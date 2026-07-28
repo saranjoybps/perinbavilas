@@ -101,6 +101,16 @@ export async function loadAllRecords(): Promise<FamilyRecord[]> {
       return record?.code;
     }
 
+    function sortCode(code: string) {
+      return code.split('/')[0];
+    }
+
+    function compareFamilyCodes(a: string, b: string) {
+      const primaryCompare = sortCode(a).localeCompare(sortCode(b), undefined, { numeric: true });
+      if (primaryCompare !== 0) return primaryCompare;
+      return a.localeCompare(b, undefined, { numeric: true });
+    }
+
     const records: FamilyRecord[] = [];
     const visited = new Set<string>();
 
@@ -110,34 +120,50 @@ export async function loadAllRecords(): Promise<FamilyRecord[]> {
       records.push(rootAncestor);
     }
 
-    function visitHierarchy(code: string) {
+    function appendRecord(code: string) {
       const actualCode = getActualCode(code);
-      if (!actualCode || visited.has(actualCode)) return;
+      if (!actualCode || visited.has(actualCode)) return null;
 
       const record = recordMap.get(actualCode);
-      if (!record) return;
+      if (!record) return null;
 
       visited.add(actualCode);
       records.push(record);
+      return record;
+    }
 
-      const unvisitedChildren = (record.children || [])
-        .filter(child => {
-          const childActual = getActualCode(child.code);
-          return childActual && !visited.has(childActual);
-        })
-        .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+    function getUnvisitedChildren(record: FamilyRecord) {
+      return (record.children || [])
+        .map(child => getActualCode(child.code))
+        .filter((childCode): childCode is string => Boolean(childCode && !visited.has(childCode)))
+        .sort(compareFamilyCodes);
+    }
 
-      for (const child of unvisitedChildren) {
-        visitHierarchy(child.code);
+    function visitHierarchyByLevel(rootCode: string) {
+      const root = appendRecord(rootCode);
+      if (!root) return;
+
+      let currentLevel = getUnvisitedChildren(root);
+      while (currentLevel.length > 0) {
+        const nextLevel: string[] = [];
+
+        for (const code of currentLevel) {
+          const record = appendRecord(code);
+          if (record) {
+            nextLevel.push(...getUnvisitedChildren(record));
+          }
+        }
+
+        currentLevel = nextLevel.sort(compareFamilyCodes);
       }
     }
 
     const familyRoots = allRecords
       .filter(r => /^[1-7]$/.test(r.code))
-      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+      .sort((a, b) => compareFamilyCodes(a.code, b.code));
 
     for (const root of familyRoots) {
-      visitHierarchy(root.code);
+      visitHierarchyByLevel(root.code);
     }
 
     for (const r of allRecords) {

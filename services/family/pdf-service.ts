@@ -20,11 +20,10 @@ const PAGE_HEIGHT = 792;
 const CONTENT_MARGIN_X = 38;
 const CONTENT_WIDTH = PAGE_WIDTH - CONTENT_MARGIN_X * 2;
 const PAGE_BORDER_MARGIN = 20;
-const PAGE_BORDER_THICKNESS = 0.65;
+const PAGE_BORDER_THICKNESS = 2.2;
 const PAGE_INNER_BORDER_GAP = 6;
-const PAGE_INNER_BORDER_THICKNESS = 0.35;
-const PAGE_CORNER_TICK_LENGTH = 28;
-const PAGE_CORNER_TICK_THICKNESS = 1.05;
+const PAGE_INNER_BORDER_THICKNESS = 1.05;
+const PAGE_BORDER_RADIUS = 8;
 const PAGE_CONTENT_TOP_PADDING = 40;
 const PAGE_CONTENT_BOTTOM_PADDING = 44;
 const PAGE_TOP_FRAME_Y = PAGE_HEIGHT - PAGE_BORDER_MARGIN;
@@ -44,7 +43,10 @@ const WHITE = rgb(1, 1, 1);
 const BLOCK_GAP = 24;
 const BLOCK_PADDING_BOTTOM = 14;
 const BLOCK_PADDING_X = 14;
-const CODE_BADGE_HEIGHT = 18;
+const CODE_BADGE_HEIGHT = 20;
+const CODE_BADGE_MIN_WIDTH = 76;
+const CODE_BADGE_PADDING_X = 18;
+const CODE_BADGE_TEXT_SIZE = 12.5;
 const PHOTO_W = 126;
 const PHOTO_H = 88;
 const PHOTO_TOP_OFFSET = 32;
@@ -305,6 +307,35 @@ async function measureFamilyBlock(pdfDoc: PDFDocument, record: FamilyRecord, fon
   return measureFamilyBlockLayout(record, font, photoLayout);
 }
 
+function roundedRectPath(x: number, y: number, width: number, height: number, radius: number) {
+  const right = x + width;
+  const top = y + height;
+  const r = Math.min(radius, width / 2, height / 2);
+  const c = r * 0.5522847498;
+
+  return [
+    `M ${x + r} ${y}`,
+    `L ${right - r} ${y}`,
+    `C ${right - r + c} ${y} ${right} ${y + r - c} ${right} ${y + r}`,
+    `L ${right} ${top - r}`,
+    `C ${right} ${top - r + c} ${right - r + c} ${top} ${right - r} ${top}`,
+    `L ${x + r} ${top}`,
+    `C ${x + r - c} ${top} ${x} ${top - r + c} ${x} ${top - r}`,
+    `L ${x} ${y + r}`,
+    `C ${x} ${y + r - c} ${x + r - c} ${y} ${x + r} ${y}`,
+    'Z',
+  ].join(' ');
+}
+
+function drawRoundedBorder(page: PDFPage, x: number, y: number, width: number, height: number, radius: number, borderWidth: number) {
+  page.drawSvgPath(roundedRectPath(0, 0, width, height, radius), {
+    x,
+    y: y + height,
+    borderColor: GREEN,
+    borderWidth,
+  });
+}
+
 async function drawDecorativeBorder(page: PDFPage) {
   const { width, height } = page.getSize();
   const innerBorderMargin = PAGE_BORDER_MARGIN + PAGE_INNER_BORDER_GAP;
@@ -325,45 +356,8 @@ async function drawDecorativeBorder(page: PDFPage) {
     color: WHITE,
   });
 
-  page.drawRectangle({
-    x: outerLeft,
-    y: outerBottom,
-    width: outerRight - outerLeft,
-    height: outerTop - outerBottom,
-    borderColor: GREEN,
-    borderWidth: PAGE_BORDER_THICKNESS,
-  });
-
-  page.drawRectangle({
-    x: innerLeft,
-    y: innerBottom,
-    width: innerRight - innerLeft,
-    height: innerTop - innerBottom,
-    borderColor: GREEN_LIGHT,
-    borderWidth: PAGE_INNER_BORDER_THICKNESS,
-  });
-
-  const tick = PAGE_CORNER_TICK_LENGTH;
-  const tickThickness = PAGE_CORNER_TICK_THICKNESS;
-  const drawCornerTick = (x: number, y: number, xDirection: 1 | -1, yDirection: 1 | -1) => {
-    page.drawLine({
-      start: { x, y },
-      end: { x: x + tick * xDirection, y },
-      thickness: tickThickness,
-      color: GREEN,
-    });
-    page.drawLine({
-      start: { x, y },
-      end: { x, y: y + tick * yDirection },
-      thickness: tickThickness,
-      color: GREEN,
-    });
-  };
-
-  drawCornerTick(innerLeft, innerTop, 1, -1);
-  drawCornerTick(innerRight, innerTop, -1, -1);
-  drawCornerTick(innerLeft, innerBottom, 1, 1);
-  drawCornerTick(innerRight, innerBottom, -1, 1);
+  drawRoundedBorder(page, outerLeft, outerBottom, outerRight - outerLeft, outerTop - outerBottom, PAGE_BORDER_RADIUS, PAGE_BORDER_THICKNESS);
+  drawRoundedBorder(page, innerLeft, innerBottom, innerRight - innerLeft, innerTop - innerBottom, PAGE_BORDER_RADIUS - 2, PAGE_INNER_BORDER_THICKNESS);
 }
 
 async function loadPhotoBuffer(photoPath: string): Promise<Buffer> {
@@ -409,23 +403,43 @@ async function drawCodeBadge(
   boldFont: PDFFont,
 ) {
   const text = `CODE ${code}`;
-  const textSize = 10.5;
-  const badgeWidth = measureTextWidth(boldFont, text, textSize) + 16;
+  const textSize = CODE_BADGE_TEXT_SIZE;
+  const badgeWidth = Math.max(
+    CODE_BADGE_MIN_WIDTH,
+    measureTextWidth(boldFont, text, textSize) + CODE_BADGE_PADDING_X * 2,
+  );
   const badgeHeight = CODE_BADGE_HEIGHT;
+  const radius = badgeHeight / 2;
+  const y = yTop - badgeHeight;
+  const centerY = y + radius;
 
   page.drawRectangle({
-    x,
-    y: yTop - badgeHeight,
-    width: badgeWidth,
+    x: x + radius,
+    y,
+    width: badgeWidth - badgeHeight,
     height: badgeHeight,
     color: GREEN,
-    borderColor: GREEN,
-    borderWidth: 0.75,
+  });
+
+  page.drawEllipse({
+    x: x + radius,
+    y: centerY,
+    xScale: radius,
+    yScale: radius,
+    color: GREEN,
+  });
+
+  page.drawEllipse({
+    x: x + badgeWidth - radius,
+    y: centerY,
+    xScale: radius,
+    yScale: radius,
+    color: GREEN,
   });
 
   page.drawText(text, {
-    x: x + 8,
-    y: yTop - 13.4,
+    x: x + (badgeWidth - measureTextWidth(boldFont, text, textSize)) / 2,
+    y: y + (badgeHeight - textSize) / 2 + 1.25,
     size: textSize,
     font: boldFont,
     color: WHITE,

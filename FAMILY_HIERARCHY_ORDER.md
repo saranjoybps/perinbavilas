@@ -10,16 +10,29 @@ The root ancestor record with code `0` must always appear first:
 0
 1
   11
+  12
+  13
+  14
+  15
   111
   112
+  113
+  121
+  122
   ...
 2
   21
+  22
+  23
   211
   ...
 3
 ...
 7
+  71
+  72/44
+  73
+  74
 ...
 ```
 
@@ -60,52 +73,72 @@ The loader performs these steps:
 3. Hydrate child display data from matching child records.
 4. Add record `0` first, if it exists.
 5. Traverse roots `1` through `7` in numeric order.
-6. For each root, visit all descendants depth-first.
+6. For each root, visit descendants level-by-level.
 7. Append any unvisited records at the end as fallback.
 
-## Depth-First Traversal
+## Level-By-Level Traversal
 
-Each family branch is walked fully before moving to the next root.
+Each main family branch is kept together, but descendants are grouped by generation.
+Direct children appear before grandchildren, grandchildren appear before great-grandchildren, and so on.
 
 Example:
 
 ```text
 1
-  11
-    111
-    112
-  12
-2
-  21
-```
-
-This keeps every family branch together.
-
-## Why Breadth-First Is Not Used
-
-A queue-based breadth-first traversal would list all siblings before descendants:
-
-```text
-1
-2
-3
 11
 12
+13
+14
+15
+111
+112
+113
+121
+122
+2
 21
 22
+211
 ```
 
-That is not correct for this directory because the expected view is branch-by-branch hierarchy.
+This keeps family `1` together, while showing all second-digit records before third-digit records.
+
+## Why Plain Global Sorting Is Not Used
+
+A plain global code sort would mix or flatten records without respecting the root traversal and fallback rules:
+
+```text
+0
+1
+11
+111
+12
+121
+```
+
+That is not correct for this directory because each root family must be processed as its own branch, with code `0` first and unlinked fallback records protected.
 
 ## Sorting
 
 Children are sorted using numeric-aware code sorting:
 
 ```ts
-a.code.localeCompare(b.code, undefined, { numeric: true })
+primaryCode.localeCompare(otherPrimaryCode, undefined, { numeric: true })
 ```
 
 This keeps codes like `2`, `10`, and `11` in natural numeric order instead of plain string order.
+
+For slash/inter-family codes, the left side of the slash is used as the primary sort key:
+
+```text
+7
+71
+72/44
+73
+74
+```
+
+In this example, `72/44` aligns with the `7` family branch and sorts as `72`.
 
 ## Fallback Records
 
