@@ -61,10 +61,12 @@ const TABLE_HEADER_HEIGHT = 15;
 const TABLE_ROW_HEIGHT = 14;
 const TABLE_GAP = 8;
 const TABLE_BOTTOM_PADDING = 10;
-const PHOTO_AREA_WIDTH = 205;
-const PHOTO_SLOT_MAX_HEIGHT = 126;
+// Slight baseline increase to make photos a bit larger by default
+const PHOTO_AREA_WIDTH = 215; // was 205
+const PHOTO_SLOT_MAX_HEIGHT = 132; // was 126
 const PHOTO_GAP = 6;
 const PHOTO_DETAIL_GAP = 18;
+
 
 type AssetName =
   | 'icon-name'
@@ -143,6 +145,7 @@ async function loadAssetImage(pdfDoc: PDFDocument, assetName: AssetName): Promis
   return pdfDoc.embedPng(pngBuffer);
 }
 
+
 function createAssetLoader(pdfDoc: PDFDocument) {
   const cache = new Map<AssetName, Promise<PDFImage>>();
 
@@ -163,10 +166,10 @@ function buildDetailRows(record: FamilyRecord): DetailRow[] {
   const rows: DetailRow[] = [
     { icon: 'icon-name', label: 'NAME', value: formatName(safeText(record.name)).toUpperCase() },
     { icon: 'icon-dob', label: 'DOB', value: formatDate(record.dob).toUpperCase() },
-    { icon: 'icon-dod', label: 'DOD', value: formatDate(record.dod).toUpperCase() },
+    ...(safeText(record.dod) ? [{ icon: 'icon-dod' as const, label: 'DOD', value: formatDate(record.dod).toUpperCase() }] : []),
     { icon: 'icon-spouse', label: 'WO/HO', value: formatName(safeText(record.spouse?.name)).toUpperCase() },
     { icon: 'icon-dob', label: 'DOB', value: formatDate(record.spouse?.dob).toUpperCase() },
-    { icon: 'icon-dod', label: 'DOD', value: formatDate(record.spouse?.dod).toUpperCase() },
+    ...(safeText(record.spouse?.dod) ? [{ icon: 'icon-dod' as const, label: 'DOD', value: formatDate(record.spouse?.dod).toUpperCase() }] : []),
     { icon: 'icon-phone', label: 'PHONE', value: formatPhoneNumbers(record).toUpperCase() },
     { icon: 'icon-telephone', label: 'TELEPHONE', value: safeText(record.landline).toUpperCase() },
     { icon: 'icon-address', label: 'ADDRESS', value: safeText(record.address).toUpperCase() },
@@ -227,6 +230,8 @@ type PhotoInfo = PhotoLayoutInfo['photos'][number];
 async function calculatePhotoLayout(
   pdfDoc: PDFDocument,
   record: FamilyRecord,
+  areaWidth?: number,
+  areaHeight?: number,
 ): Promise<PhotoLayoutInfo> {
   const photos = getPhotos(record);
   
@@ -250,10 +255,12 @@ async function calculatePhotoLayout(
     return { photos: [], imageLayout: null, layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
   }
 
+  const containerW = areaWidth ?? PHOTO_AREA_WIDTH;
+  const containerH = areaHeight ?? PHOTO_SLOT_MAX_HEIGHT;
   const imageLayout = createImageLayout(
     embeddedPhotos.map((photo) => ({ id: photo.id, width: photo.width, height: photo.height })),
-    PHOTO_AREA_WIDTH,
-    PHOTO_SLOT_MAX_HEIGHT,
+    containerW,
+    containerH,
     PHOTO_GAP,
   );
 
@@ -302,8 +309,18 @@ function measureFamilyBlockLayout(record: FamilyRecord, font: PDFFont, photoLayo
   };
 }
 
-async function measureFamilyBlock(pdfDoc: PDFDocument, record: FamilyRecord, font: PDFFont) {
-  const photoLayout = await calculatePhotoLayout(pdfDoc, record);
+async function measureFamilyBlock(
+  pdfDoc: PDFDocument,
+  record: FamilyRecord,
+  font: PDFFont,
+  photoAreaOverrides?: { areaWidth?: number; areaHeight?: number },
+) {
+  const photoLayout = await calculatePhotoLayout(
+    pdfDoc,
+    record,
+    photoAreaOverrides?.areaWidth,
+    photoAreaOverrides?.areaHeight,
+  );
   return measureFamilyBlockLayout(record, font, photoLayout);
 }
 
@@ -842,13 +859,77 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const loadAsset = createAssetLoader(pdfDoc);
 
-  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  await drawDecorativeBorder(page);
-
-  let cursorY = PAGE_BLOCK_TOP;
+  // Two-pass layout: 1) measure all blocks, 2) paginate and compute leftover space,
+  // 3) for pages with 1-2 cards apply a modest scale to photo area and re-measure.
+  const measuredLayouts: FamilyBlockLayout[] = [];
   for (const record of records) {
     const layout = await measureFamilyBlock(pdfDoc, record, font);
+    measuredLayouts.push(layout);
+  }
+
+  // Simulate pagination to group record indices into pages
+  const pages: number[][] = [];
+  let currentPage: number[] = [];
+  let used = 0;
+  for (let i = 0; i < records.length; i += 1) {
+    const h = measuredLayouts[i].blockHeight;
+    const gap = currentPage.length > 0 ? BLOCK_GAP : 0;
+    if (used + gap + h > PAGE_BLOCK_MAX_HEIGHT) {
+      if (currentPage.length > 0) pages.push(currentPage);
+      currentPage = [i];
+      used = h;
+    } else {
+      currentPage.push(i);
+      used += gap + h;
+    }
+  }
+  if (currentPage.length > 0) pages.push(currentPage);
+
+  // Adjust layouts for pages with spare vertical space (1 or 2 cards)
+  const baselinePhotoArea = PHOTO_AREA_WIDTH * PHOTO_SLOT_MAX_HEIGHT;
+  for (const pageIndices of pages) {
+    const n = pageIndices.length;
+    if (n === 0) continue;
+    const gapsTotal = Math.max(0, n - 1) * BLOCK_GAP;
+    const sumHeights = pageIndices.reduce((s, idx) => s + measuredLayouts[idx].blockHeight, 0);
+    const remainingSpace = PAGE_BLOCK_MAX_HEIGHT - (sumHeights + gapsTotal);
+
+    if (remainingSpace <= 8) continue; // ignore tiny amounts
+
+    if (n === 1 || n === 2) {
+      // allocate a portion of remaining space to photo area growth
+      const desiredExtra = remainingSpace * 0.6; // 60% goes to photos/top area
+      const perCardExtra = desiredExtra / n;
+      const scale = 1 + Math.min(0.2, perCardExtra / Math.max(1, baselinePhotoArea * 0.5));
+
+      if (scale > 1.01) {
+        // re-measure affected records with scaled photo area
+        for (const idx of pageIndices) {
+          const oldLayout = measuredLayouts[idx];
+          const newAreaW = Math.round(PHOTO_AREA_WIDTH * scale);
+          const newAreaH = Math.round(PHOTO_SLOT_MAX_HEIGHT * scale);
+          const newLayout = await measureFamilyBlock(pdfDoc, records[idx], font, { areaWidth: newAreaW, areaHeight: newAreaH });
+          // ensure we didn't overflow the page block max height; if so, keep old layout
+          if (newLayout.blockHeight <= PAGE_BLOCK_MAX_HEIGHT) {
+            measuredLayouts[idx] = newLayout;
+          } else {
+            measuredLayouts[idx] = oldLayout;
+          }
+        }
+      }
+    }
+  }
+
+  // Drawing pass using adjusted measuredLayouts
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  await drawDecorativeBorder(page);
+  let cursorY = PAGE_BLOCK_TOP;
+
+  for (let i = 0; i < records.length; i += 1) {
+    const record = records[i];
+    const layout = measuredLayouts[i];
     const requiredHeight = layout.blockHeight;
+
     if (requiredHeight > PAGE_BLOCK_MAX_HEIGHT) {
       const result = await drawOversizedFamilyBlock(
         pdfDoc,
