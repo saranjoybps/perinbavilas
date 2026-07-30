@@ -32,7 +32,7 @@ const PAGE_BLOCK_TOP = PAGE_TOP_FRAME_Y - PAGE_CONTENT_TOP_PADDING;
 const PAGE_BLOCK_BOTTOM = PAGE_BOTTOM_FRAME_Y + PAGE_CONTENT_BOTTOM_PADDING;
 const PAGE_BLOCK_MAX_HEIGHT = PAGE_BLOCK_TOP - PAGE_BLOCK_BOTTOM;
 const PAGE_NUMBER_Y = 34;
-const PAGE_NUMBER_FONT_SIZE = 8.5;
+const PAGE_NUMBER_FONT_SIZE = 11;
 
 const GREEN = rgb(0.18, 0.44, 0.15);
 const GREEN_LIGHT = rgb(0.84, 0.9, 0.82);
@@ -40,25 +40,25 @@ const GREEN_PALE = rgb(0.94, 0.97, 0.93);
 const TEXT = rgb(0.12, 0.12, 0.12);
 const WHITE = rgb(1, 1, 1);
 
-const BLOCK_GAP = 24;
+const BLOCK_GAP = 16;
 const BLOCK_PADDING_BOTTOM = 14;
 const BLOCK_PADDING_X = 14;
-const CODE_BADGE_HEIGHT = 20;
-const CODE_BADGE_MIN_WIDTH = 76;
-const CODE_BADGE_PADDING_X = 18;
-const CODE_BADGE_TEXT_SIZE = 12.5;
+const CODE_BADGE_HEIGHT = 26;
+const CODE_BADGE_MIN_WIDTH = 92;
+const CODE_BADGE_PADDING_X = 10;
+const CODE_BADGE_TEXT_SIZE = 16;
 const PHOTO_W = 126;
 const PHOTO_H = 88;
-const PHOTO_TOP_OFFSET = 32;
+const PHOTO_TOP_OFFSET = 44;
 const DETAIL_ICON_SIZE = 10;
-const DETAIL_FONT = 7.35;
-const DETAIL_LABEL_WIDTH = 52;
-const DETAIL_ROW_GAP = 5.2;
-const DETAIL_LINE_HEIGHT = 11.2;
-const DETAIL_VALUE_X_GAP = 8;
-const DETAIL_RULE_TOP_OFFSET = 1.0;
-const TABLE_HEADER_HEIGHT = 15;
-const TABLE_ROW_HEIGHT = 14;
+const DETAIL_FONT = 9.5;
+const DETAIL_LABEL_WIDTH = 60;
+const DETAIL_ROW_GAP = 7.5;
+const DETAIL_LINE_HEIGHT = 11;
+const DETAIL_VALUE_X_GAP = 10;
+
+const TABLE_HEADER_HEIGHT = 19;
+const TABLE_ROW_HEIGHT = 18;
 const TABLE_GAP = 8;
 const TABLE_BOTTOM_PADDING = 10;
 // Slight baseline increase to make photos a bit larger by default
@@ -81,6 +81,9 @@ type DetailRow = {
   icon: AssetName;
   label: string;
   value: string;
+  secondaryIcon?: AssetName;
+  secondaryLabel?: string;
+  secondaryValue?: string;
 };
 
 const ASSET_PATHS: Record<AssetName, string> = {
@@ -123,21 +126,6 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   return lines;
 }
 
-function drawDottedRule(page: PDFPage, x1: number, y: number, x2: number, color = GREEN_LIGHT, dotWidth = 0.3, gap = 3.0) {
-  let currentX = x1;
-  while (currentX < x2) {
-    const endX = Math.min(currentX + dotWidth, x2);
-    page.drawRectangle({
-      x: currentX,
-      y,
-      width: endX - currentX,
-      height: dotWidth,
-      color,
-    });
-    currentX += dotWidth + gap;
-  }
-}
-
 async function loadAssetImage(pdfDoc: PDFDocument, assetName: AssetName): Promise<PDFImage> {
   const fullPath = path.join(process.cwd(), 'public', ASSET_PATHS[assetName]);
   const buffer = await fs.readFile(fullPath);
@@ -163,15 +151,21 @@ function formatPhoneNumbers(record: FamilyRecord) {
 }
 
 function buildDetailRows(record: FamilyRecord): DetailRow[] {
+  const mainDob = formatDate(record.dob).toUpperCase();
+  const mainDod = record.dod ? formatDate(record.dod).toUpperCase() : null;
+  const spouseDob = record.spouse?.dob ? formatDate(record.spouse.dob).toUpperCase() : '';
+  const spouseDod = record.spouse?.dod ? formatDate(record.spouse.dod).toUpperCase() : null;
+
   const rows: DetailRow[] = [
     { icon: 'icon-name', label: 'NAME', value: formatName(safeText(record.name)).toUpperCase() },
-    { icon: 'icon-dob', label: 'DOB', value: formatDate(record.dob).toUpperCase() },
-    ...(safeText(record.dod) ? [{ icon: 'icon-dod' as const, label: 'DOD', value: formatDate(record.dod).toUpperCase() }] : []),
+    mainDod
+      ? { icon: 'icon-dob', label: 'DOB', value: mainDob, secondaryIcon: 'icon-dob', secondaryLabel: 'DOD', secondaryValue: mainDod }
+      : { icon: 'icon-dob', label: 'DOB', value: mainDob },
     { icon: 'icon-spouse', label: 'WO/HO', value: formatName(safeText(record.spouse?.name)).toUpperCase() },
-    { icon: 'icon-dob', label: 'DOB', value: formatDate(record.spouse?.dob).toUpperCase() },
-    ...(safeText(record.spouse?.dod) ? [{ icon: 'icon-dod' as const, label: 'DOD', value: formatDate(record.spouse?.dod).toUpperCase() }] : []),
+    spouseDod
+      ? { icon: 'icon-dob', label: 'DOB', value: spouseDob, secondaryIcon: 'icon-dob', secondaryLabel: 'DOD', secondaryValue: spouseDod }
+      : { icon: 'icon-dob', label: 'DOB', value: spouseDob },
     { icon: 'icon-phone', label: 'PHONE', value: formatPhoneNumbers(record).toUpperCase() },
-    { icon: 'icon-telephone', label: 'TELEPHONE', value: safeText(record.landline).toUpperCase() },
     { icon: 'icon-address', label: 'ADDRESS', value: safeText(record.address).toUpperCase() },
   ];
 
@@ -184,7 +178,7 @@ function computeDetailLayout(record: FamilyRecord, font: PDFFont, valueWidth: nu
   let height = 0;
   const rowHeights = rows.map((row) => {
     const wrapped = wrapText(row.value, font, DETAIL_FONT, valueWidth);
-    const rowHeight = Math.max(DETAIL_LINE_HEIGHT, wrapped.length * 8.2) + DETAIL_ROW_GAP;
+    const rowHeight = Math.max(DETAIL_LINE_HEIGHT, wrapped.length * 10.5) + DETAIL_ROW_GAP;
     height += rowHeight;
     return rowHeight;
   });
@@ -205,10 +199,10 @@ function computeChildrenTableLayout(record: FamilyRecord, font: PDFFont, width: 
   const rowHeights = record.children.map((child) => {
     const values = [safeText(child.code).toUpperCase(), formatName(safeText(child.name)).toUpperCase(), formatDate(child.dob).toUpperCase()];
     const maxLines = values.reduce((count, value, index) => (
-      Math.max(count, wrapText(value, font, 8, colWidths[index] - 10).length)
+      Math.max(count, wrapText(value, font, 10, colWidths[index] - 10).length)
     ), 1);
 
-    return Math.max(TABLE_ROW_HEIGHT, maxLines * 8.6 + 5);
+    return Math.max(TABLE_ROW_HEIGHT, maxLines * 11 + 5);
   });
 
   return {
@@ -304,6 +298,37 @@ function measureFamilyBlockLayout(record: FamilyRecord, font: PDFFont, photoLayo
     detailX,
     detailRight,
     topSectionHeight,
+    tableHeight,
+    tableRowHeights: tableLayout.rowHeights,
+  };
+}
+
+function measureSingleDigitBlockLayout(record: FamilyRecord, font: PDFFont, photoLayout: PhotoLayoutInfo): FamilyBlockLayout {
+  const innerWidth = CONTENT_WIDTH - BLOCK_PADDING_X * 2;
+  const detailBlockWidth = 340;
+  const centeredDetailX = CONTENT_MARGIN_X + BLOCK_PADDING_X + (innerWidth - detailBlockWidth) / 2;
+  const valueX = centeredDetailX + DETAIL_ICON_SIZE + 6 + DETAIL_LABEL_WIDTH + DETAIL_VALUE_X_GAP;
+  const detailRight = centeredDetailX + detailBlockWidth;
+  const detailValueWidth = Math.max(80, detailRight - valueX - 8);
+  const detailLayout = computeDetailLayout(record, font, detailValueWidth);
+  const tableLayout = computeChildrenTableLayout(record, font, innerWidth);
+
+  const photoHeight = photoLayout.layoutHeight;
+  const detailHeight = detailLayout.height;
+  const tableHeight = tableLayout.height;
+
+  const gapBadgePhoto = photoHeight ? 8 : 0;
+  const gapPhotoDetails = photoHeight && detailHeight ? 10 : 0;
+  const gapDetailsTable = tableHeight ? TABLE_GAP : 0;
+
+  const totalHeight = CODE_BADGE_HEIGHT + gapBadgePhoto + photoHeight + gapPhotoDetails + detailHeight + gapDetailsTable + tableHeight + TABLE_BOTTOM_PADDING + BLOCK_PADDING_BOTTOM;
+
+  return {
+    blockHeight: Math.ceil(totalHeight),
+    photoLayout,
+    detailX: centeredDetailX,
+    detailRight,
+    topSectionHeight: Math.max(photoHeight, detailHeight),
     tableHeight,
     tableRowHeights: tableLayout.rowHeights,
   };
@@ -507,7 +532,7 @@ async function drawDetailRows(
   const valueX = x + DETAIL_ICON_SIZE + 6 + DETAIL_LABEL_WIDTH + DETAIL_VALUE_X_GAP;
   const valueWidth = Math.max(80, innerRight - valueX - 8);
   const { rows, rowHeights, height } = computeDetailLayout(record, font, valueWidth);
-  const iconSize = 9.0;
+  const iconSize = 11;
   let currentTop = yTop;
 
   for (let i = 0; i < rows.length; i += 1) {
@@ -549,10 +574,49 @@ async function drawDetailRows(
         font,
         color: TEXT,
       });
-      lineY -= 8.1;
+      lineY -= 10.5;
     }
 
-    drawDottedRule(page, valueX, rowBottom + DETAIL_RULE_TOP_OFFSET, innerRight, GREEN_LIGHT, 0.5, 2.8);
+    if (row.secondaryValue && row.secondaryIcon && row.secondaryLabel) {
+      const dobValueWidth = measureTextWidth(font, row.value, DETAIL_FONT);
+      const gap = 24;
+      const secondaryIconX = valueX + dobValueWidth + gap;
+      const dodIcon = await loadAsset(row.secondaryIcon);
+      page.drawImage(dodIcon, {
+        x: secondaryIconX,
+        y: currentTop - 8.3,
+        width: iconSize,
+        height: iconSize,
+      });
+
+      const dodLabelX = secondaryIconX + iconSize + 4;
+      page.drawText(row.secondaryLabel, {
+        x: dodLabelX,
+        y: currentTop - 7.0,
+        size: DETAIL_FONT,
+        font: boldFont,
+        color: GREEN,
+      });
+
+      const dodColonX = dodLabelX + measureTextWidth(boldFont, row.secondaryLabel, DETAIL_FONT);
+      page.drawText(':', {
+        x: dodColonX,
+        y: currentTop - 7.0,
+        size: DETAIL_FONT,
+        font: boldFont,
+        color: GREEN,
+      });
+
+      const dodValueX = dodColonX + measureTextWidth(boldFont, ':', DETAIL_FONT) + 3;
+      page.drawText(row.secondaryValue, {
+        x: dodValueX,
+        y: currentTop - 7.0,
+        size: DETAIL_FONT,
+        font,
+        color: TEXT,
+      });
+    }
+
     currentTop = rowBottom;
   }
 
@@ -592,11 +656,11 @@ function drawChildrenTable(
   let headerX = tableX;
   for (let i = 0; i < headerLabels.length; i += 1) {
     const label = headerLabels[i];
-    const labelWidth = measureTextWidth(boldFont, label, 8.6);
+    const labelWidth = measureTextWidth(boldFont, label, 11);
     page.drawText(label, {
       x: headerX + (colWidths[i] - labelWidth) / 2,
-      y: topY - 11.1,
-      size: 8.6,
+      y: topY - 12,
+      size: 11,
       font: boldFont,
       color: WHITE,
     });
@@ -619,12 +683,12 @@ function drawChildrenTable(
     });
 
     const values = [safeText(child.code).toUpperCase(), formatName(safeText(child.name)).toUpperCase(), formatDate(child.dob).toUpperCase()];
-    const sizes = [8, 8, 8];
+    const sizes = [10, 10, 10];
     let valueX = tableX;
     for (let colIndex = 0; colIndex < values.length; colIndex += 1) {
       const lines = wrapText(values[colIndex], font, sizes[colIndex], colWidths[colIndex] - 10);
-      const totalTextHeight = lines.length * 8.6;
-      let lineY = rowBottom + (rowHeight + totalTextHeight) / 2 - 6.4;
+      const totalTextHeight = lines.length * 11;
+      let lineY = rowBottom + (rowHeight + totalTextHeight) / 2 - 7.9;
 
       for (const line of lines) {
         const textWidth = measureTextWidth(font, line, sizes[colIndex]);
@@ -635,7 +699,7 @@ function drawChildrenTable(
           font,
           color: TEXT,
         });
-        lineY -= 8.6;
+        lineY -= 11;
       }
 
       valueX += colWidths[colIndex];
@@ -674,7 +738,7 @@ function sumRowHeights(rowHeights: number[], startIndex: number, rowCount: numbe
   return rowHeights.slice(startIndex, startIndex + rowCount).reduce((sum, height) => sum + height, 0);
 }
 
-async function drawFamilyBlock(
+async function drawSingleDigitFamilyBlock(
   page: PDFPage,
   record: FamilyRecord,
   startY: number,
@@ -685,22 +749,60 @@ async function drawFamilyBlock(
 ) {
   const innerWidth = CONTENT_WIDTH - BLOCK_PADDING_X * 2;
   const photoX = CONTENT_MARGIN_X + BLOCK_PADDING_X;
+  const blockTop = startY;
+  const blockHeight = layout.blockHeight;
+  let cursorY = blockTop;
+
+  const badgeText = `CODE ${record.code}`;
+  const badgeWidth = Math.max(CODE_BADGE_MIN_WIDTH, measureTextWidth(boldFont, badgeText, CODE_BADGE_TEXT_SIZE) + CODE_BADGE_PADDING_X * 2);
+  const centeredBadgeX = photoX + (innerWidth - badgeWidth) / 2;
+  await drawCodeBadge(page, centeredBadgeX, cursorY, record.code, boldFont);
+  cursorY -= CODE_BADGE_HEIGHT;
+
+  if (layout.photoLayout.photos.length > 0) {
+    cursorY -= 8;
+    const photoAreaWidth = layout.photoLayout.layoutWidth;
+    const centeredPhotoX = photoX + (innerWidth - photoAreaWidth) / 2;
+    await drawPhotoPanel(page, layout.photoLayout, centeredPhotoX, cursorY);
+    cursorY -= layout.photoLayout.layoutHeight;
+  }
+
+  if (layout.photoLayout.photos.length > 0 && layout.tableHeight) {
+    cursorY -= 10;
+  }
+
+  const detailResult = await drawDetailRows(page, loadAsset, record, layout.detailX, cursorY, font, boldFont, layout.detailRight);
+  cursorY = detailResult.bottomY;
+
+  if (record.children?.length) {
+    cursorY -= TABLE_GAP;
+    drawChildrenTable(page, record, photoX, cursorY, innerWidth, font, boldFont, layout.tableRowHeights);
+  }
+
+  return blockTop - blockHeight;
+}
+
+async function drawFamilyBlock(
+  page: PDFPage,
+  record: FamilyRecord,
+  startY: number,
+  font: PDFFont,
+  boldFont: PDFFont,
+  loadAsset: ReturnType<typeof createAssetLoader>,
+  layout: FamilyBlockLayout,
+) {
+  if (/^\d$/.test(String(record.code).trim())) {
+    return drawSingleDigitFamilyBlock(page, record, startY, font, boldFont, loadAsset, layout);
+  }
+
+  const innerWidth = CONTENT_WIDTH - BLOCK_PADDING_X * 2;
+  const photoX = CONTENT_MARGIN_X + BLOCK_PADDING_X;
   
   const blockHeight = layout.blockHeight;
   const blockTop = startY;
   const blockBottom = blockTop - blockHeight;
 
-  page.drawRectangle({
-    x: CONTENT_MARGIN_X,
-    y: blockBottom,
-    width: CONTENT_WIDTH,
-    height: blockHeight,
-    borderColor: GREEN,
-    borderWidth: 1,
-    color: WHITE,
-  });
-
-  await drawCodeBadge(page, photoX, blockTop - 8, record.code, boldFont);
+  await drawCodeBadge(page, photoX, blockTop, record.code, boldFont);
   
   await drawPhotoPanel(page, layout.photoLayout, photoX, blockTop - PHOTO_TOP_OFFSET);
   
@@ -737,8 +839,18 @@ async function drawOversizedFamilyBlock(
   let lastBlockBottom = startY;
   const childCount = record.children?.length ?? 0;
 
+  const isSingleDigitCode = /^\d$/.test(String(record.code).trim());
+  let badgeX = photoX;
+  if (isSingleDigitCode) {
+    const badgeText = `CODE ${record.code}`;
+    const badgeWidth = Math.max(CODE_BADGE_MIN_WIDTH, measureTextWidth(boldFont, badgeText, CODE_BADGE_TEXT_SIZE) + CODE_BADGE_PADDING_X * 2);
+    badgeX = photoX + (innerWidth - badgeWidth) / 2;
+  }
+
   const topSectionHeight = layout.topSectionHeight;
-  const firstPageBaseHeight = PHOTO_TOP_OFFSET + topSectionHeight + BLOCK_PADDING_BOTTOM;
+  const firstPageBaseHeight = isSingleDigitCode
+    ? layout.blockHeight - (layout.tableHeight ? TABLE_GAP + layout.tableHeight + TABLE_BOTTOM_PADDING : 0)
+    : PHOTO_TOP_OFFSET + topSectionHeight + BLOCK_PADDING_BOTTOM;
   const firstPageAvailable = currentStartY - PAGE_BLOCK_BOTTOM;
 
   if (firstPageAvailable < Math.min(firstPageBaseHeight, PAGE_BLOCK_MAX_HEIGHT)) {
@@ -758,35 +870,52 @@ async function drawOversizedFamilyBlock(
   const firstBlockBottom = currentStartY - firstSegmentHeight;
   lastBlockBottom = firstBlockBottom;
 
-  currentPage.drawRectangle({
-    x: CONTENT_MARGIN_X,
-    y: firstBlockBottom,
-    width: CONTENT_WIDTH,
-    height: firstSegmentHeight,
-    borderColor: GREEN,
-    borderWidth: 1,
-    color: WHITE,
-  });
+  if (isSingleDigitCode) {
+    // Vertical stack for single-digit oversized first page
+    let cursorY = currentStartY;
+    await drawCodeBadge(currentPage, badgeX, cursorY, record.code, boldFont);
+    cursorY -= CODE_BADGE_HEIGHT;
 
-  await drawCodeBadge(currentPage, photoX, currentStartY - 8, record.code, boldFont);
-  await drawPhotoPanel(currentPage, layout.photoLayout, photoX, currentStartY - PHOTO_TOP_OFFSET);
+    if (layout.photoLayout.photos.length > 0) {
+      cursorY -= 8;
+      const photoAreaWidth = layout.photoLayout.layoutWidth;
+      const centeredPhotoX = photoX + (innerWidth - photoAreaWidth) / 2;
+      await drawPhotoPanel(currentPage, layout.photoLayout, centeredPhotoX, cursorY);
+      cursorY -= layout.photoLayout.layoutHeight;
+    }
 
-  const detailTop = currentStartY - PHOTO_TOP_OFFSET;
-  await drawDetailRows(currentPage, loadAsset, record, layout.detailX, detailTop, font, boldFont, layout.detailRight);
+    if (layout.photoLayout.photos.length > 0 && layout.tableHeight) {
+      cursorY -= 10;
+    }
 
-  if (firstSegmentHasTable) {
-    drawChildrenTable(
-      currentPage,
-      record,
-      photoX,
-      currentStartY - PHOTO_TOP_OFFSET - topSectionHeight - TABLE_GAP,
-      innerWidth,
-      font,
-      boldFont,
-      layout.tableRowHeights,
-      0,
-      firstRows,
-    );
+    const detailResult = await drawDetailRows(currentPage, loadAsset, record, layout.detailX, cursorY, font, boldFont, layout.detailRight);
+    cursorY = detailResult.bottomY;
+
+    if (firstSegmentHasTable) {
+      cursorY -= TABLE_GAP;
+      drawChildrenTable(currentPage, record, photoX, cursorY, innerWidth, font, boldFont, layout.tableRowHeights, 0, firstRows);
+    }
+  } else {
+    await drawCodeBadge(currentPage, photoX, currentStartY, record.code, boldFont);
+    await drawPhotoPanel(currentPage, layout.photoLayout, photoX, currentStartY - PHOTO_TOP_OFFSET);
+
+    const detailTop = currentStartY - PHOTO_TOP_OFFSET;
+    await drawDetailRows(currentPage, loadAsset, record, layout.detailX, detailTop, font, boldFont, layout.detailRight);
+
+    if (firstSegmentHasTable) {
+      drawChildrenTable(
+        currentPage,
+        record,
+        photoX,
+        currentStartY - PHOTO_TOP_OFFSET - topSectionHeight - TABLE_GAP,
+        innerWidth,
+        font,
+        boldFont,
+        layout.tableRowHeights,
+        0,
+        firstRows,
+      );
+    }
   }
 
   nextChildIndex = firstRows;
@@ -796,29 +925,20 @@ async function drawOversizedFamilyBlock(
     await drawDecorativeBorder(currentPage);
     currentStartY = PAGE_BLOCK_TOP;
 
-    const rowsAvailable = PAGE_BLOCK_MAX_HEIGHT - PHOTO_TOP_OFFSET - TABLE_HEADER_HEIGHT - TABLE_BOTTOM_PADDING;
+    const topOffset = isSingleDigitCode ? CODE_BADGE_HEIGHT + 8 : PHOTO_TOP_OFFSET;
+    const rowsAvailable = PAGE_BLOCK_MAX_HEIGHT - topOffset - TABLE_HEADER_HEIGHT - TABLE_BOTTOM_PADDING;
     const rowsOnPage = countRowsThatFit(layout.tableRowHeights, nextChildIndex, rowsAvailable);
     const rowsHeight = sumRowHeights(layout.tableRowHeights, nextChildIndex, rowsOnPage);
-    const segmentHeight = PHOTO_TOP_OFFSET + TABLE_HEADER_HEIGHT + rowsHeight + TABLE_BOTTOM_PADDING;
+    const segmentHeight = topOffset + TABLE_HEADER_HEIGHT + rowsHeight + TABLE_BOTTOM_PADDING;
     const blockBottom = currentStartY - segmentHeight;
     lastBlockBottom = blockBottom;
 
-    currentPage.drawRectangle({
-      x: CONTENT_MARGIN_X,
-      y: blockBottom,
-      width: CONTENT_WIDTH,
-      height: segmentHeight,
-      borderColor: GREEN,
-      borderWidth: 1,
-      color: WHITE,
-    });
-
-    await drawCodeBadge(currentPage, photoX, currentStartY - 8, record.code, boldFont);
+    await drawCodeBadge(currentPage, badgeX, currentStartY, record.code, boldFont);
     drawChildrenTable(
       currentPage,
       record,
       photoX,
-      currentStartY - PHOTO_TOP_OFFSET,
+      currentStartY - topOffset,
       innerWidth,
       font,
       boldFont,
@@ -855,15 +975,18 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
   const pdfDoc = await PDFDocument.create();
   pdfDoc.setTitle(title);
 
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const boldFont = font;
   const loadAsset = createAssetLoader(pdfDoc);
 
   // Two-pass layout: 1) measure all blocks, 2) paginate and compute leftover space,
   // 3) for pages with 1-2 cards apply a modest scale to photo area and re-measure.
   const measuredLayouts: FamilyBlockLayout[] = [];
   for (const record of records) {
-    const layout = await measureFamilyBlock(pdfDoc, record, font);
+    const photoLayout = await calculatePhotoLayout(pdfDoc, record);
+    const layout = /^\d$/.test(String(record.code).trim())
+      ? measureSingleDigitBlockLayout(record, font, photoLayout)
+      : measureFamilyBlockLayout(record, font, photoLayout);
     measuredLayouts.push(layout);
   }
 
@@ -872,9 +995,16 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
   let currentPage: number[] = [];
   let used = 0;
   for (let i = 0; i < records.length; i += 1) {
+    const record = records[i];
     const h = measuredLayouts[i].blockHeight;
     const gap = currentPage.length > 0 ? BLOCK_GAP : 0;
-    if (used + gap + h > PAGE_BLOCK_MAX_HEIGHT) {
+    const isSingleDigitCode = /^\d$/.test(String(record.code).trim());
+
+    if (isSingleDigitCode) {
+      if (currentPage.length > 0) pages.push(currentPage);
+      currentPage = [i];
+      used = PAGE_BLOCK_MAX_HEIGHT + 1;
+    } else if (used + gap + h > PAGE_BLOCK_MAX_HEIGHT) {
       if (currentPage.length > 0) pages.push(currentPage);
       currentPage = [i];
       used = h;
@@ -905,6 +1035,8 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
       if (scale > 1.01) {
         // re-measure affected records with scaled photo area
         for (const idx of pageIndices) {
+          const record = records[idx];
+          if (/^\d$/.test(String(record.code).trim())) continue;
           const oldLayout = measuredLayouts[idx];
           const newAreaW = Math.round(PHOTO_AREA_WIDTH * scale);
           const newAreaH = Math.round(PHOTO_SLOT_MAX_HEIGHT * scale);
@@ -929,6 +1061,34 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
     const record = records[i];
     const layout = measuredLayouts[i];
     const requiredHeight = layout.blockHeight;
+    const isSingleDigitCode = /^\d$/.test(String(record.code).trim());
+
+    if (isSingleDigitCode) {
+      if (requiredHeight <= PAGE_BLOCK_MAX_HEIGHT) {
+        const centeredY = PAGE_BLOCK_TOP - (PAGE_BLOCK_MAX_HEIGHT - requiredHeight) / 2;
+        if (centeredY - requiredHeight >= PAGE_BLOCK_BOTTOM) {
+          if (cursorY >= PAGE_BLOCK_TOP) {
+            cursorY = centeredY;
+          } else {
+            page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+            await drawDecorativeBorder(page);
+            cursorY = centeredY;
+          }
+        } else if (cursorY < PAGE_BLOCK_TOP) {
+          page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+          await drawDecorativeBorder(page);
+          cursorY = PAGE_BLOCK_TOP;
+        }
+      } else if (cursorY < PAGE_BLOCK_TOP) {
+        page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        await drawDecorativeBorder(page);
+        cursorY = PAGE_BLOCK_TOP;
+      }
+    } else if (cursorY < PAGE_BLOCK_TOP) {
+      page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      await drawDecorativeBorder(page);
+      cursorY = PAGE_BLOCK_TOP;
+    }
 
     if (requiredHeight > PAGE_BLOCK_MAX_HEIGHT) {
       const result = await drawOversizedFamilyBlock(
@@ -942,7 +1102,7 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
         layout,
       );
       page = result.page;
-      cursorY = result.cursorY - BLOCK_GAP;
+      cursorY = isSingleDigitCode ? PAGE_BLOCK_BOTTOM : result.cursorY - BLOCK_GAP;
       continue;
     }
 
@@ -961,7 +1121,7 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
       loadAsset,
       layout,
     );
-    cursorY -= BLOCK_GAP;
+    cursorY = isSingleDigitCode ? PAGE_BLOCK_BOTTOM : cursorY - BLOCK_GAP;
   }
 
   drawPageNumbers(pdfDoc, font);
