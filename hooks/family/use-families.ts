@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { FamilyRecord, FilterOptions, SortField, SortOrder, DashboardStats } from "@/types/family";
+import { getSpouses } from "@/lib/family-utils";
 import { getFamilies } from "@/lib/api";
 
 export function useFamilies() {
@@ -45,7 +46,7 @@ export function useFamilies() {
         (r) =>
           r.code.toLowerCase().includes(q) ||
           r.name.toLowerCase().includes(q) ||
-          (r.spouse?.name || "").toLowerCase().includes(q) ||
+          getSpouses(r).some((s) => s.name.toLowerCase().includes(q)) ||
           r.children.some((c) => c.name.toLowerCase().includes(q)) ||
           (r.address || "").toLowerCase().includes(q) ||
           (r.occupation || "").toLowerCase().includes(q) ||
@@ -60,9 +61,9 @@ export function useFamilies() {
       result = result.filter((r) => !(r.photos || []).length);
     }
     if (filters.hasSpouse === true) {
-      result = result.filter((r) => r.spouse?.name);
+      result = result.filter((r) => getSpouses(r).length > 0);
     } else if (filters.hasSpouse === false) {
-      result = result.filter((r) => !r.spouse?.name);
+      result = result.filter((r) => getSpouses(r).length === 0);
     }
     if (filters.childrenCountMin !== null) {
       result = result.filter((r) => r.children.length >= filters.childrenCountMin!);

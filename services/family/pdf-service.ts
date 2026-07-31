@@ -2,6 +2,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import crypto from 'crypto';
 import sharp from 'sharp';
 import { FamilyRecord } from '@/types/family';
 import { formatDate, formatName } from '@/lib/formatters';
@@ -14,6 +15,7 @@ import {
   rgb,
 } from 'pdf-lib';
 import { ImageLayoutResult, createImageLayout } from '@/services/family/image-layout-engine';
+import { getSpouses, normalizePhotos } from '@/lib/family-utils';
 
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
@@ -66,6 +68,111 @@ const PHOTO_AREA_WIDTH = 215; // was 205
 const PHOTO_SLOT_MAX_HEIGHT = 132; // was 126
 const PHOTO_GAP = 6;
 const PHOTO_DETAIL_GAP = 18;
+const SINGLE_DIGIT_PHOTO_CELL_W = 120;
+const SINGLE_DIGIT_PHOTO_CELL_H = 160;
+
+const INTRO_IMAGE_PATH = 'index.PNG';
+const INTRO_TITLE = 'INTRODUCTION';
+const INTRO_TITLE_SIZE = 18;
+const INTRO_FONT_SIZE = 10.5;
+const INTRO_LINE_HEIGHT = 14;
+const INTRO_PARAGRAPH_GAP = 7;
+const INTRO_TITLE_GAP = 14;
+
+const INTRO_TEXT = `Yesuvadiyan Nadar (b. 1845) and his family lived in Semmarikulam near Megnanapuram, Tuticorin District. His original name and his wife name were not known. It is presumed that he should have embraced Christianity and therefore left Semmarikulam and moved to Adayal in around 1875. During that period many people in and around the area have started settling in Adayal. The place name was called Adayal because it means 'adaithal' or settlement. A church was built in Adayal and the Christian people in Adayal started worshipping Jesus Christ.
+
+He should has moved from semmarikulam after the birth of his eldest son. The eldest son name was Perumal Nadar, but after conversion his name was Perinbam Nadar. His sister and brother names were Christian names from the beginning.
+
+Yesuvadiyan Nadar was born around 1845. He has got three children.
+1. Perinbam Nadar (Perumal Nadar) 1872?-1956
+2. Packiam Ammal (d)
+3. Abraham Nadar (d)
+
+Since, Perumal Nadar has become Christian, his name has changed from Perumal Nadar to Perinbam Nadar. The details of Perinbam Nadar family tree have only been incorporated in this book. However, the details of his brother and sister also have been collected and it is worth that those details are given here in short.
+
+Packiam Ammal
+Packiam ammal married Koilpillai Nadar of Mukuperi. They had 3 children, viz.
+1. Rubavathy (d) m.Jesudoss (d)
+2. Gnanamani (d) m. Roberts (d)
+3. Packiamani (d) m.Moses (d)
+
+Rubavathy had the following children. The places where they are living now are also indicated therein.
+1. Packiathai (?) m.Wilson (?) USA
+2. Wales (d) m.Sumathy USA
+3. Stephen m.Rajakili (Washington, USA)
+4. Suganthy ...?
+5. Jeyaraj (d)
+6. Kiruba ... ?
+7. Joy ..... ?
+
+Gnanamani had the following children. The places where they are living now are also indicated therein.
+1. Florence m.Sundaraj (d.2015).. Palaniyappapuram
+2. Vimala(d) m.John .Nazareth.Now lives with their daughter in Bangalore.
+3. Radhabai (d?) before marriage expired.
+4. Chandra (d?) m.Arunachalam Pillai of Srilanka and now in USA
+5. Deboral (d.2015) m.Gunasingh (d.2014) lived with their son Rajkumar Gunasingh in Chennai
+6. Robinson (d?) before marriage
+7. Angela (d?) m.Mohandass (Retired HM) lives in Palayamkottai with their daughter Henrita Gnanam, Asst. Prof. in English in Sarah Tucker college.
+8. Davidson m.Philomenal. Mr.Davidson is LIC Agent and Philomenal is staff nurse in JIPMER. Pondicherry.
+9. Jesson Roberts m.Viji living in Washinton, USA. Their children are also settled in USA.
+
+Packiamani ammal (d) married Moses (d) and they were having the following children:
+1. Jesuran Ponraj m.Packiamani lives in Coimbatore Colombo Stores at Singanallur along with family.
+2. Johnson Moses m.Jenilla Settled in USA
+3. Joshua Moses (d) m.Ruth lives in Bangalore with family.
+4. Jessen Moses m.Jasmine settled in USA
+5. Joel Moses m.Julie lives in Bangalore with family.
+6. Rani Moses m.Sugantha balan settled in USA
+
+Abraham Nadar
+Abraham Nadar m. Alagammai Ammal
+They were having the following children:
+1. Arputhamani Ammal (d) m.Palpandian (d) lived in Adayal
+2. Isaac Theodre Nadar (b.18.07.1923 - d.21.02.1980)
+   m.Lilliy Rajammal Annapoo (b.10.06.1930 - d.17.08.2013)
+
+Arputhamani had the following children:
+1. Alagubai (?) m. (?) Retired HM in Coimbatore
+2. Jeyaseeli (d) m. (?) lived in Coimbatore
+3. Beaulah (d) m. (?) lived in Pichivilai
+4. Amala (d) m. (?) lived in Chennai
+
+Isaac Theodre has the following children:
+1. Abraham Stalin Rajakumar (d) m.Jeyakumari living with daughter in Chennai
+2. Glory (d.10.04.1973) not married.
+3. Mary m.Selwyn (d) lives in Srivaikuntam
+4. Selwyn m.Sunirem Nightingale Lives in Kallidaikurichi
+
+(m - married, b - born, d- died)
+
+YPM was a well known paper and stationeries organization in Srilanka from 1950s onwards. It was situated in Maliban street, near Colombo Fort Railway Station. YPM stands for Yesuvadiyan, Perinbam and Manickavasagam. Yesuvadiyan Nadar, his son Perinbam Nadar and Manickavasagam Nadar, the brother in law of Perinbam Nadar founded and developed the co. to a great paper and stationery business centre, importing them directly from foreign countries like Sweden, Norway, South Africa, Japan, Holland through Triconamalai and Colombo ports. All four sons of Perinbam Nadar viz. Rajamani Nadar, Rajasigamani Nadar, Palpandian Nadar and Duraipandian Nadar and the sons of the daughters of Perinbam Nadar viz. Annamani, Annapoomani and Jothi Rethnamani were all involved in the business.
+
+Simultaneously, they started business in Chennai, by acquiring buildings in and around Mambalam Railway Station. Now the organizations are well known by PVT. It consists of
+1. Perinbavilas Transports
+2. Perinbavilas Travels
+3. Perinbavilas Theatre
+4. Perinbavilas Towers
+5. Perinbavilas Traders
+6. Perinbavilas Thottam
+7. Perinbam Stores
+8. Perinbam Aqua Farms and others
+
+Perinbavilas group took keen interest in building the new Church in Adayal. The entire family members lived in a common house, Pannaiya veedu, before moving to individual houses.
+
+Before going to the Perinbavilas family tree, it is apt to indicate the family details of Annammal, wife of Perinbam Nadar also here. She is from Adayal. Her father was Abraham Nadar, who was called 'Vathiar', since he was a teacher.
+
+Abraham Nadar had the following children:
+1. Annammal Perinbam (b. 1886 - d. 1949)
+2. Mary Ammal (She was married to a Hindu and her name was Mariammal)
+3. Manickavasagam Nadar (b. 1897 - d 1958)
+4. Devadasan Nadar (b. 1900 - d. 1974)
+5. Navamani Nadar (b. 1903 - d. 1964)
+
+It has to be noted that all the children of Abraham vathiar lived in Adayal only.
+
+I have taken the initiative to collect various details about the family members of the Perinbam Nadar family tree and compile them. I would like to thank all the members of our family, who have furnished details about the members and their photographs.
+
+D. SUTHANTHIRARAJ PERINBAM`;
 
 
 type AssetName =
@@ -153,21 +260,29 @@ function formatPhoneNumbers(record: FamilyRecord) {
 function buildDetailRows(record: FamilyRecord): DetailRow[] {
   const mainDob = formatDate(record.dob).toUpperCase();
   const mainDod = record.dod ? formatDate(record.dod).toUpperCase() : null;
-  const spouseDob = record.spouse?.dob ? formatDate(record.spouse.dob).toUpperCase() : '';
-  const spouseDod = record.spouse?.dod ? formatDate(record.spouse.dod).toUpperCase() : null;
 
   const rows: DetailRow[] = [
     { icon: 'icon-name', label: 'NAME', value: formatName(safeText(record.name)).toUpperCase() },
     mainDod
       ? { icon: 'icon-dob', label: 'DOB', value: mainDob, secondaryIcon: 'icon-dob', secondaryLabel: 'DOD', secondaryValue: mainDod }
       : { icon: 'icon-dob', label: 'DOB', value: mainDob },
-    { icon: 'icon-spouse', label: 'WO/HO', value: formatName(safeText(record.spouse?.name)).toUpperCase() },
-    spouseDod
-      ? { icon: 'icon-dob', label: 'DOB', value: spouseDob, secondaryIcon: 'icon-dob', secondaryLabel: 'DOD', secondaryValue: spouseDod }
-      : { icon: 'icon-dob', label: 'DOB', value: spouseDob },
+  ];
+
+  for (const spouse of getSpouses(record)) {
+    const spouseDob = spouse.dob ? formatDate(spouse.dob).toUpperCase() : '';
+    const spouseDod = spouse.dod ? formatDate(spouse.dod).toUpperCase() : null;
+    rows.push({ icon: 'icon-spouse', label: 'WO/HO', value: formatName(safeText(spouse.name)).toUpperCase() });
+    rows.push(
+      spouseDod
+        ? { icon: 'icon-dob', label: 'DOB', value: spouseDob, secondaryIcon: 'icon-dob', secondaryLabel: 'DOD', secondaryValue: spouseDod }
+        : { icon: 'icon-dob', label: 'DOB', value: spouseDob },
+    );
+  }
+
+  rows.push(
     { icon: 'icon-phone', label: 'PHONE', value: formatPhoneNumbers(record).toUpperCase() },
     { icon: 'icon-address', label: 'ADDRESS', value: safeText(record.address).toUpperCase() },
-  ];
+  );
 
   return rows.filter((row) => row.value.length > 0);
 }
@@ -226,6 +341,7 @@ async function calculatePhotoLayout(
   record: FamilyRecord,
   areaWidth?: number,
   areaHeight?: number,
+  useFixedCells = false,
 ): Promise<PhotoLayoutInfo> {
   const photos = getPhotos(record);
   
@@ -234,11 +350,17 @@ async function calculatePhotoLayout(
   }
 
   const embeddedPhotos: PhotoInfo[] = [];
+  const seenContent = new Set<string>();
 
   for (const [index, photoPath] of photos.slice(0, 2).entries()) {
     try {
-      const { image, width: origW, height: origH } = await embedPhoto(pdfDoc, photoPath);
-      
+      const { image, width: origW, height: origH, contentHash } = await embedPhoto(pdfDoc, photoPath);
+
+      if (seenContent.has(contentHash)) {
+        continue;
+      }
+      seenContent.add(contentHash);
+
       embeddedPhotos.push({ id: `${index}`, image, width: origW, height: origH });
     } catch {
       // Skip photos that can't be loaded
@@ -256,6 +378,9 @@ async function calculatePhotoLayout(
     containerW,
     containerH,
     PHOTO_GAP,
+    useFixedCells
+      ? { fixedCell: { cellWidth: SINGLE_DIGIT_PHOTO_CELL_W, cellHeight: SINGLE_DIGIT_PHOTO_CELL_H } }
+      : undefined,
   );
 
   return {
@@ -423,18 +548,12 @@ async function embedPhoto(pdfDoc: PDFDocument, photoPath: string) {
   const image = isJpeg
     ? await pdfDoc.embedJpg(buffer)
     : await pdfDoc.embedPng(buffer);
-  return { image, width: metadata.width ?? PHOTO_W, height: metadata.height ?? PHOTO_H };
+  const contentHash = crypto.createHash('md5').update(buffer).digest('hex');
+  return { image, width: metadata.width ?? PHOTO_W, height: metadata.height ?? PHOTO_H, contentHash };
 }
 
 function getPhotos(record: FamilyRecord): string[] {
-  const seen = new Set<string>();
-  return (record.photos ?? []).filter((photo): photo is string => {
-    if (typeof photo !== 'string' || photo.length === 0 || seen.has(photo)) {
-      return false;
-    }
-    seen.add(photo);
-    return true;
-  });
+  return normalizePhotos(record.photos);
 }
 
 async function drawCodeBadge(
@@ -953,11 +1072,90 @@ async function drawOversizedFamilyBlock(
   return { page: currentPage, cursorY: lastBlockBottom };
 }
 
-function drawPageNumbers(pdfDoc: PDFDocument, font: PDFFont) {
+async function embedIntroImage(pdfDoc: PDFDocument): Promise<PDFImage> {
+  const fullPath = path.join(process.cwd(), 'public', INTRO_IMAGE_PATH);
+  const buffer = await fs.readFile(fullPath);
+  const metadata = await sharp(buffer).metadata();
+  const isJpeg = metadata.format === 'jpeg';
+  return isJpeg ? await pdfDoc.embedJpg(buffer) : await pdfDoc.embedPng(buffer);
+}
+
+async function drawCoverPage(pdfDoc: PDFDocument, image: PDFImage) {
+  const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  page.drawImage(image, {
+    x: 0,
+    y: 0,
+    width: PAGE_WIDTH,
+    height: PAGE_HEIGHT,
+  });
+}
+
+async function drawIntroductionPages(pdfDoc: PDFDocument, font: PDFFont) {
+  const innerWidth = CONTENT_WIDTH - BLOCK_PADDING_X * 2;
+  const x = CONTENT_MARGIN_X + BLOCK_PADDING_X;
+
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  await drawDecorativeBorder(page);
+  let cursorY = PAGE_BLOCK_TOP;
+
+  const ensureSpace = async (needed: number) => {
+    if (cursorY - needed < PAGE_BLOCK_BOTTOM) {
+      page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      await drawDecorativeBorder(page);
+      cursorY = PAGE_BLOCK_TOP;
+    }
+  };
+
+  await ensureSpace(INTRO_TITLE_SIZE + INTRO_TITLE_GAP);
+  const titleWidth = measureTextWidth(font, INTRO_TITLE, INTRO_TITLE_SIZE);
+  page.drawText(INTRO_TITLE, {
+    x: x + (innerWidth - titleWidth) / 2,
+    y: cursorY - INTRO_TITLE_SIZE,
+    size: INTRO_TITLE_SIZE,
+    font,
+    color: GREEN,
+  });
+  cursorY -= INTRO_TITLE_SIZE + INTRO_TITLE_GAP;
+
+  const paragraphs = INTRO_TEXT
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .reduce<string[][]>((acc, line) => {
+      if (!line) {
+        if (acc.length && acc[acc.length - 1].length) acc.push([]);
+        return acc;
+      }
+      if (!acc.length) acc.push([]);
+      acc[acc.length - 1].push(line);
+      return acc;
+    }, []);
+
+  for (const paragraph of paragraphs) {
+    if (!paragraph.length) continue;
+    const wrapped = wrapText(paragraph.join(' '), font, INTRO_FONT_SIZE, innerWidth);
+    for (const line of wrapped) {
+      await ensureSpace(INTRO_LINE_HEIGHT);
+      page.drawText(line, {
+        x,
+        y: cursorY - INTRO_FONT_SIZE,
+        size: INTRO_FONT_SIZE,
+        font,
+        color: TEXT,
+      });
+      cursorY -= INTRO_LINE_HEIGHT;
+    }
+    if (cursorY - INTRO_PARAGRAPH_GAP >= PAGE_BLOCK_BOTTOM) {
+      cursorY -= INTRO_PARAGRAPH_GAP;
+    }
+  }
+}
+
+function drawPageNumbers(pdfDoc: PDFDocument, font: PDFFont, startIndex = 0) {
   const pages = pdfDoc.getPages();
   const totalPages = pages.length;
 
   pages.forEach((page, index) => {
+    if (index < startIndex) return;
     const pageNumber = `${index + 1}/${totalPages}`;
     const pageNumberWidth = measureTextWidth(font, pageNumber, PAGE_NUMBER_FONT_SIZE);
 
@@ -979,12 +1177,17 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
   const boldFont = font;
   const loadAsset = createAssetLoader(pdfDoc);
 
+  const introImage = await embedIntroImage(pdfDoc);
+  await drawCoverPage(pdfDoc, introImage);
+  await drawIntroductionPages(pdfDoc, font);
+
   // Two-pass layout: 1) measure all blocks, 2) paginate and compute leftover space,
   // 3) for pages with 1-2 cards apply a modest scale to photo area and re-measure.
   const measuredLayouts: FamilyBlockLayout[] = [];
   for (const record of records) {
-    const photoLayout = await calculatePhotoLayout(pdfDoc, record);
-    const layout = /^\d$/.test(String(record.code).trim())
+    const isSingleDigit = /^\d$/.test(String(record.code).trim());
+    const photoLayout = await calculatePhotoLayout(pdfDoc, record, undefined, undefined, isSingleDigit);
+    const layout = isSingleDigit
       ? measureSingleDigitBlockLayout(record, font, photoLayout)
       : measureFamilyBlockLayout(record, font, photoLayout);
     measuredLayouts.push(layout);
@@ -1084,10 +1287,6 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
         await drawDecorativeBorder(page);
         cursorY = PAGE_BLOCK_TOP;
       }
-    } else if (cursorY < PAGE_BLOCK_TOP) {
-      page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      await drawDecorativeBorder(page);
-      cursorY = PAGE_BLOCK_TOP;
     }
 
     if (requiredHeight > PAGE_BLOCK_MAX_HEIGHT) {
@@ -1124,7 +1323,7 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
     cursorY = isSingleDigitCode ? PAGE_BLOCK_BOTTOM : cursorY - BLOCK_GAP;
   }
 
-  drawPageNumbers(pdfDoc, font);
+  drawPageNumbers(pdfDoc, font, 1);
 
   return pdfDoc.save();
 }

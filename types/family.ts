@@ -17,6 +17,7 @@ export interface FamilyMember {
   dob: string | null;
   dod: string | null;
   spouse: Spouse;
+  spouses?: Spouse[];
   family_name: string | null;
   address: string | null;
   cell_numbers: string[];

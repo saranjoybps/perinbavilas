@@ -2,6 +2,7 @@
 
 import { FamilyRecord } from "@/types/family";
 import { formatDate, formatName } from "@/lib/formatters";
+import { getSpouses } from "@/lib/family-utils";
 
 const inputStyle = {
   width: '100%',
@@ -83,13 +84,19 @@ export function FamilyViewDialog({ record, open, onOpenChange }: FamilyViewDialo
             </div>
           </div>
           <div>
-            {record.spouse?.name && (
+            {getSpouses(record).length > 0 && (
               <>
-                <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.62rem', letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.5rem' }}>Spouse</p>
+                <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.62rem', letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.5rem' }}>
+                  Spouse{getSpouses(record).length > 1 ? 's' : ''}
+                </p>
                 <div style={{ fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: '#1A1008', lineHeight: 2 }}>
-                  <div style={{ fontWeight: 500 }}>{formatName(record.spouse.name)}</div>
-                  {record.spouse.dob && <div style={{ color: 'rgba(26,16,8,0.55)' }}>DOB: {formatDate(record.spouse.dob)}</div>}
-                  {record.spouse.dod && <div style={{ color: 'rgba(26,16,8,0.55)' }}>DOD: {formatDate(record.spouse.dod)}</div>}
+                  {getSpouses(record).map((spouse, i) => (
+                    <div key={i} style={{ marginBottom: i < getSpouses(record).length - 1 ? '0.5rem' : 0 }}>
+                      <div style={{ fontWeight: 500 }}>{formatName(spouse.name)}</div>
+                      {spouse.dob && <div style={{ color: 'rgba(26,16,8,0.55)' }}>DOB: {formatDate(spouse.dob)}</div>}
+                      {spouse.dod && <div style={{ color: 'rgba(26,16,8,0.55)' }}>DOD: {formatDate(spouse.dod)}</div>}
+                    </div>
+                  ))}
                 </div>
               </>
             )}

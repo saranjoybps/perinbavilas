@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { FamilyRecord } from "@/types/family";
 import { formatName } from "@/lib/formatters";
+import { getSpouses } from "@/lib/family-utils";
 import { deleteFamily } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -137,9 +138,9 @@ export function DeleteConfirmModal({ record, open, onOpenChange, onDeleted }: De
                 <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.78rem', fontWeight: 600, color: '#1A1008', marginBottom: '0.2rem' }}>
                   {record.code} — {formatName(record.name)}
                 </p>
-                {record.spouse?.name && (
+                {getSpouses(record).length > 0 && (
                   <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.72rem', color: 'rgba(26,16,8,0.55)', margin: 0 }}>
-                    Spouse: {formatName(record.spouse.name)}
+                    Spouse: {getSpouses(record).map(s => formatName(s.name)).join(', ')}
                   </p>
                 )}
               </div>

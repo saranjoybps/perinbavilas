@@ -270,12 +270,17 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
         }
       }
 
+      const spouse = values.spouseName?.trim()
+        ? { name: values.spouseName.trim(), dob: values.spouseDob ?? null, dod: values.spouseDod ?? null }
+        : null;
+
       const familyData = {
         code: values.code, name: values.name, dob: values.dob, dod: values.dod,
         family_name: values.family_name, address: values.address,
         cell_numbers: values.cell_numbers.filter(Boolean), landline: values.landline,
         email: values.email, occupation: values.occupation, photos: finalPhotos,
-        spouse: { name: values.spouseName, dob: values.spouseDob, dod: values.spouseDod },
+        spouse: spouse || { name: '', dob: null, dod: null },
+        spouses: spouse ? [spouse] : [],
         children: values.children.map((c) => ({ code: c.code, name: c.name, dob: c.dob ?? null })),
       };
       await addFamily(familyData);

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { FamilyRecord, FamilyMember } from "@/types/family";
+import { getSpouses, normalizePhotos } from "@/lib/family-utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,9 +24,11 @@ const familySchema = z.object({
   landline: z.string().nullable(),
   email: z.string().nullable(),
   occupation: z.string().nullable(),
-  spouseName: z.string(),
-  spouseDob: z.string().nullable(),
-  spouseDod: z.string().nullable(),
+  spouses: z.array(z.object({
+    name: z.string(),
+    dob: z.string().nullable(),
+    dod: z.string().nullable(),
+  })),
   children: z.array(z.object({
     code: z.string().min(1, "Child code is required"),
     name: z.string().min(1, "Child name is required"),
@@ -119,7 +122,7 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
 
   const form = useForm<FamilyFormValues>({
     resolver: zodResolver(familySchema),
-    defaultValues: { code: "", name: "", dob: null, dod: null, family_name: null, address: null, cell_numbers: [], landline: null, email: null, occupation: null, spouseName: "", spouseDob: null, spouseDod: null, children: [], photos: [] },
+    defaultValues: { code: "", name: "", dob: null, dod: null, family_name: null, address: null, cell_numbers: [], landline: null, email: null, occupation: null, spouses: [{ name: "", dob: null, dod: null }], children: [], photos: [] },
   });
 
   const { reset, watch, setValue, register, handleSubmit, formState: { errors } } = form;
@@ -130,17 +133,6 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
       URL.revokeObjectURL(previewUrl);
     }
     pendingUploadsRef.current.clear();
-  }, []);
-
-  const normalizePhotos = useCallback((photos: string[] = []) => {
-    const seen = new Set<string>();
-    return photos.filter((photo): photo is string => {
-      if (typeof photo !== "string" || photo.length === 0 || seen.has(photo)) {
-        return false;
-      }
-      seen.add(photo);
-      return true;
-    });
   }, []);
 
   useEffect(() => {
@@ -157,9 +149,8 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
       setValue("landline", record.landline ?? null);
       setValue("email", record.email ?? null);
       setValue("occupation", record.occupation ?? null);
-      setValue("spouseName", record.spouse?.name ?? "");
-      setValue("spouseDob", record.spouse?.dob ?? null);
-      setValue("spouseDod", record.spouse?.dod ?? null);
+      const spouses = getSpouses(record);
+      setValue("spouses", spouses.length ? spouses.map(s => ({ name: s.name ?? "", dob: s.dob ?? null, dod: s.dod ?? null })) : [{ name: "", dob: null, dod: null }]);
       setValue("children", record.children ?? []);
       const photos = normalizePhotos(record.photos ?? []);
       setValue("photos", photos);
@@ -176,9 +167,7 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
       setValue("landline", null);
       setValue("email", null);
       setValue("occupation", null);
-      setValue("spouseName", "");
-      setValue("spouseDob", null);
-      setValue("spouseDod", null);
+      setValue("spouses", [{ name: "", dob: null, dod: null }]);
       setValue("children", []);
       setValue("photos", []);
       setOriginalPhotos([]);
@@ -232,6 +221,21 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
     }
   }, [childrenOfParent, setValue]);
 
+  const updateSpouse = useCallback((index: number, field: 'name' | 'dob' | 'dod', value: string | null) => {
+    const next = [...watch("spouses")];
+    next[index] = { ...next[index], [field]: value };
+    setValue("spouses", next);
+  }, [watch, setValue]);
+
+  const addSpouse = useCallback(() => {
+    setValue("spouses", [...watch("spouses"), { name: "", dob: null, dod: null }]);
+  }, [watch, setValue]);
+
+  const removeSpouse = useCallback((index: number) => {
+    const next = watch("spouses").filter((_, i) => i !== index);
+    setValue("spouses", next.length ? next : [{ name: "", dob: null, dod: null }]);
+  }, [watch, setValue]);
+
   const onSubmit = async (values: FamilyFormValues) => {
     if (saving) return;
 
@@ -266,12 +270,17 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
         }
       }
 
+      const spouses = values.spouses
+        .map(s => ({ name: (s.name ?? "").trim(), dob: s.dob ?? null, dod: s.dod ?? null }))
+        .filter(s => s.name);
+
       familyData = {
         code: values.code, name: values.name, dob: values.dob, dod: values.dod,
         family_name: values.family_name, address: values.address,
         cell_numbers: values.cell_numbers.filter(Boolean), landline: values.landline,
         email: values.email, occupation: values.occupation, photos: finalPhotos,
-        spouse: { name: values.spouseName, dob: values.spouseDob, dod: values.spouseDod },
+        spouse: spouses[0] || { name: '', dob: null, dod: null },
+        spouses,
         children: values.children.map((c) => ({ code: c.code, name: c.name, dob: c.dob ?? null })),
       };
       if (isEditing && record) {
@@ -462,19 +471,45 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
 
           {activeTab === 'spouse' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.25rem' }}>
+              {watch("spouses").map((spouse, index) => (
+                <div key={index} style={{ border: '1px solid rgba(212,175,55,0.2)', borderRadius: '6px', padding: '0.85rem', background: 'rgba(255,255,255,0.35)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                    <span style={{ ...labelStyle, marginBottom: 0, color: 'rgba(196,155,26,0.75)' }}>Spouse {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeSpouse(index)}
+                      style={{
+                        fontFamily: 'var(--font-inter)', fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+                        padding: '0.25rem 0.6rem', border: '1px solid rgba(176,48,48,0.3)', background: 'transparent',
+                        color: '#b03030', cursor: 'pointer', borderRadius: '4px', transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#b03030'; e.currentTarget.style.color = '#fff'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#b03030'; }}
+                    >Remove</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div>
+                      <label style={labelStyle}>Spouse Name</label>
+                      <input style={inputStyle} value={spouse.name || ""} onChange={(e) => updateSpouse(index, 'name', e.target.value)} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                      <div>
+                        <label style={labelStyle}>Spouse DOB</label>
+                        <DatePicker value={spouse.dob} onChange={(v) => updateSpouse(index, 'dob', v)} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Spouse DOD</label>
+                        <DatePicker value={spouse.dod} onChange={(v) => updateSpouse(index, 'dod', v)} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
               <div>
-                <label style={labelStyle}>Spouse Name</label>
-                <input style={inputStyle} {...register("spouseName")} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                  <div>
-                    <label style={labelStyle}>Spouse DOB</label>
-                    <DatePicker value={watch("spouseDob")} onChange={(v) => setValue("spouseDob", v)} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Spouse DOD</label>
-                    <DatePicker value={watch("spouseDod")} onChange={(v) => setValue("spouseDod", v)} />
-                  </div>
+                <button type="button" style={btnBase} onClick={addSpouse}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+                >+ Add Spouse</button>
               </div>
             </div>
           )}

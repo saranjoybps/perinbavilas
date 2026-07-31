@@ -2,6 +2,7 @@
 
 import { FamilyRecord, SortField } from "@/types/family";
 import { formatDate, formatName } from "@/lib/formatters";
+import { getSpouses } from "@/lib/family-utils";
 
 const thStyle = {
   fontFamily: 'var(--font-inter)',
@@ -93,7 +94,7 @@ export function FamilyTable({ records, onEdit, onView, onDelete, sortField, sort
                 >
                   <td style={tdStyle}><span style={codeBadge}>{record.code}</span></td>
                   <td style={{ ...tdStyle, fontWeight: 500 }}>{formatName(record.name)}</td>
-                  <td style={{ ...tdStyle, color: 'rgba(26,16,8,0.55)' }}>{formatName(record.spouse?.name) || '—'}</td>
+                  <td style={{ ...tdStyle, color: 'rgba(26,16,8,0.55)' }}>{formatName(getSpouses(record).map(s => s.name).join(', ')) || '—'}</td>
                   <td style={{ ...tdStyle, color: 'rgba(26,16,8,0.55)' }}>{formatDate(record.dob) || '—'}</td>
                   <td style={tdStyle}>{record.children.length}</td>
                   <td style={{ ...tdStyle, color: 'rgba(26,16,8,0.55)' }}>

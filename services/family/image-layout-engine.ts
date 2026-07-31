@@ -39,6 +39,11 @@ export type ImageLayoutResult = {
   placements: ImagePlacement[];
 };
 
+export type FixedCellLayoutOptions = {
+  cellWidth: number;
+  cellHeight: number;
+};
+
 type Slot = {
   imageIndex: number;
   x: number;
@@ -76,6 +81,7 @@ export function createImageLayout(
   containerWidth: number,
   containerHeight: number,
   gap: number,
+  options?: { fixedCell?: FixedCellLayoutOptions },
 ): ImageLayoutResult {
   const images = inputImages.slice(0, 2).map((image) => ({
     ...classifyImage(image.width, image.height),
@@ -92,15 +98,40 @@ export function createImageLayout(
     };
   }
 
-  const templates = buildTemplates(images, containerWidth, containerHeight, gap);
+  let templates: LayoutTemplate[];
+  let layoutWidth: number;
+  let layoutHeight: number;
+
+  const fixedCell = options?.fixedCell;
+  if (fixedCell) {
+    layoutWidth = images.length * fixedCell.cellWidth + Math.max(0, images.length - 1) * gap;
+    layoutHeight = fixedCell.cellHeight;
+    templates = [
+      {
+        id: 'fixed-cells',
+        slots: images.map((image, index) => ({
+          imageIndex: index,
+          x: index * (fixedCell.cellWidth + gap),
+          y: 0,
+          width: fixedCell.cellWidth,
+          height: fixedCell.cellHeight,
+        })),
+      },
+    ];
+  } else {
+    layoutWidth = containerWidth;
+    layoutHeight = containerHeight;
+    templates = buildTemplates(images, containerWidth, containerHeight, gap);
+  }
+
   const best = templates
     .map((template) => ({ template, score: scoreTemplate(template, images) }))
     .sort((a, b) => b.score - a.score)[0].template;
 
   return {
     selectedLayout: best.id,
-    containerWidth,
-    containerHeight,
+    containerWidth: layoutWidth,
+    containerHeight: layoutHeight,
     images,
     placements: best.slots.map((slot) => createPlacement(images[slot.imageIndex], slot)),
   };

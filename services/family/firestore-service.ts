@@ -1,6 +1,6 @@
 'use server';
 
-import { FamilyMember, FamilyRecord } from '@/types/family';
+import { FamilyMember, FamilyRecord, Spouse } from '@/types/family';
 import { adminDb } from '@/lib/firebase/admin';
 import { deleteFamilyImages } from '@/services/family/image-service';
 
@@ -14,16 +14,29 @@ function sanitizeDocId(code: string): string {
   return code.replace(/\//g, '-');
 }
 
+function normalizeSpouseFields(spouses: Spouse[] | undefined, spouse: Spouse | undefined): { spouse: Spouse; spouses: Spouse[] } {
+  const list = (spouses && spouses.length ? spouses : spouse?.name ? [spouse] : [])
+    .filter((s) => s && s.name?.trim())
+    .map((s) => ({ name: s.name?.trim() || '', dob: s.dob || null, dod: s.dod || null }));
+  return {
+    spouse: list[0] || { name: '', dob: null, dod: null },
+    spouses: list,
+  };
+}
+
 function recordToFamilyRecord(doc: FirebaseFirestore.DocumentSnapshot): FamilyRecord | null {
   const data = doc.data();
   if (!data) return null;
+
+  const spouseFields = normalizeSpouseFields(data.spouses, data.spouse);
 
   return {
     code: data.code || doc.id,
     name: data.name || '',
     dob: data.dob || null,
     dod: data.dod || null,
-    spouse: data.spouse || { name: '', dob: null, dod: null },
+    spouse: spouseFields.spouse,
+    spouses: spouseFields.spouses,
     family_name: data.family_name || null,
     address: data.address || null,
     cell_numbers: data.cell_numbers || [],
@@ -258,6 +271,8 @@ export async function createRecord(data: FamilyMember): Promise<FamilyRecord> {
     .get();
   const maxOrder = maxOrderSnapshot.empty ? 0 : (maxOrderSnapshot.docs[0].data()._fileOrder || 0);
 
+  const spouseFields = normalizeSpouseFields(data.spouses, data.spouse);
+
   const newRecord: FamilyRecord = {
     ...data,
     photos: data.photos || [],
@@ -267,7 +282,8 @@ export async function createRecord(data: FamilyMember): Promise<FamilyRecord> {
       dob: c.dob || null,
       dod: c.dod || null,
     })),
-    spouse: data.spouse || { name: '', dob: null, dod: null },
+    spouse: spouseFields.spouse,
+    spouses: spouseFields.spouses,
     _sourceFile: 'firestore',
     _fileOrder: maxOrder + 1,
     _editedAt: new Date().toISOString(),
@@ -314,13 +330,19 @@ export async function updateRecord(code: string, updates: Partial<FamilyMember>)
 
   const docId = sanitizeDocId(code);
 
+  const hasSpouseUpdate = updates.spouses !== undefined || updates.spouse !== undefined;
+  const spouseFields = hasSpouseUpdate
+    ? normalizeSpouseFields(updates.spouses, updates.spouse)
+    : { spouse: existing.spouse, spouses: existing.spouses ?? [] };
+
   const updatedRecord: FamilyRecord = {
     ...existing,
     ...updates,
     children: updates.children
       ? updates.children.map(c => ({ code: c.code, name: c.name, dob: c.dob || null, dod: c.dod || null }))
       : existing.children,
-    spouse: updates.spouse || existing.spouse,
+    spouse: spouseFields.spouse,
+    spouses: spouseFields.spouses,
     photos: updates.photos || existing.photos,
     _editedAt: new Date().toISOString(),
   } as FamilyRecord;
