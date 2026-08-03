@@ -44,6 +44,11 @@ export type FixedCellLayoutOptions = {
   cellHeight: number;
 };
 
+export type ImageLayoutOptions = {
+  fixedCell?: FixedCellLayoutOptions;
+  forceLayout?: string;
+};
+
 type Slot = {
   imageIndex: number;
   x: number;
@@ -81,7 +86,7 @@ export function createImageLayout(
   containerWidth: number,
   containerHeight: number,
   gap: number,
-  options?: { fixedCell?: FixedCellLayoutOptions },
+  options?: ImageLayoutOptions,
 ): ImageLayoutResult {
   const images = inputImages.slice(0, 2).map((image) => ({
     ...classifyImage(image.width, image.height),
@@ -122,6 +127,19 @@ export function createImageLayout(
     layoutWidth = containerWidth;
     layoutHeight = containerHeight;
     templates = buildTemplates(images, containerWidth, containerHeight, gap);
+  }
+
+  if (options?.forceLayout) {
+    const forced = templates.find((template) => template.id === options.forceLayout);
+    if (forced) {
+      return {
+        selectedLayout: forced.id,
+        containerWidth: layoutWidth,
+        containerHeight: layoutHeight,
+        images,
+        placements: forced.slots.map((slot) => createPlacement(images[slot.imageIndex], slot)),
+      };
+    }
   }
 
   const best = templates

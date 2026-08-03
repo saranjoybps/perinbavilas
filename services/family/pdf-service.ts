@@ -51,7 +51,9 @@ const CODE_BADGE_PADDING_X = 10;
 const CODE_BADGE_TEXT_SIZE = 16;
 const PHOTO_W = 126;
 const PHOTO_H = 88;
-const PHOTO_TOP_OFFSET = 44;
+// Compact (non-single-digit) template: photo area uses the left column efficiently.
+// Badge bottom sits 14px above the photo area (was 18px) to cut vertical whitespace.
+const PHOTO_TOP_OFFSET = 40;
 const DETAIL_ICON_SIZE = 10;
 const DETAIL_FONT = 9.5;
 const DETAIL_LABEL_WIDTH = 60;
@@ -63,13 +65,18 @@ const TABLE_HEADER_HEIGHT = 19;
 const TABLE_ROW_HEIGHT = 18;
 const TABLE_GAP = 8;
 const TABLE_BOTTOM_PADDING = 10;
-// Slight baseline increase to make photos a bit larger by default
-const PHOTO_AREA_WIDTH = 215; // was 205
-const PHOTO_SLOT_MAX_HEIGHT = 132; // was 126
-const PHOTO_GAP = 6;
-const PHOTO_DETAIL_GAP = 18;
-const SINGLE_DIGIT_PHOTO_CELL_W = 120;
-const SINGLE_DIGIT_PHOTO_CELL_H = 160;
+// Compact (non-single-digit) template: photo container is wider (more of the left
+// column) with tighter spacing so photos render ~20-30% larger without raising the
+// card height (the vertical slot max grew only slightly, absorbed by the reduced
+// top offset above).
+const PHOTO_AREA_WIDTH = 250; // was 215 (compact template only)
+const PHOTO_SLOT_MAX_HEIGHT = 142; // was 132
+const PHOTO_GAP = 6; // shared with single-digit template - keep unchanged
+const PHOTO_DETAIL_GAP = 12; // was 18
+// Single-family (single-digit code) template: photos size dynamically by count
+const SINGLE_DIGIT_SINGLE_PHOTO_HEIGHT = 240; // 1 photo: large centered portrait (220-260px)
+const SINGLE_DIGIT_TWO_PHOTO_HEIGHT = 185; // 2 photos: side-by-side (170-200px each)
+const SINGLE_DIGIT_PHOTO_DETAIL_GAP = 18; // 15-25px spacing between photos and details
 
 const INTRO_IMAGE_PATH = 'index.PNG';
 const INTRO_TITLE = 'INTRODUCTION';
@@ -341,7 +348,7 @@ async function calculatePhotoLayout(
   record: FamilyRecord,
   areaWidth?: number,
   areaHeight?: number,
-  useFixedCells = false,
+  isSingleDigit = false,
 ): Promise<PhotoLayoutInfo> {
   const photos = getPhotos(record);
   
@@ -371,17 +378,40 @@ async function calculatePhotoLayout(
     return { photos: [], imageLayout: null, layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
   }
 
-  const containerW = areaWidth ?? PHOTO_AREA_WIDTH;
+  const photoInputs = embeddedPhotos.map((photo) => ({ id: photo.id, width: photo.width, height: photo.height }));
+  const containerW = areaWidth ?? (isSingleDigit ? CONTENT_WIDTH - BLOCK_PADDING_X * 2 : PHOTO_AREA_WIDTH);
+
+  if (isSingleDigit) {
+    // Single-family template: size the image container dynamically by photo count.
+    if (embeddedPhotos.length === 1) {
+      const imageLayout = createImageLayout(photoInputs, containerW, SINGLE_DIGIT_SINGLE_PHOTO_HEIGHT, PHOTO_GAP);
+      return {
+        photos: embeddedPhotos,
+        imageLayout,
+        layoutWidth: imageLayout.containerWidth,
+        layoutHeight: imageLayout.containerHeight,
+        isHorizontal: false,
+      };
+    }
+
+    const imageLayout = createImageLayout(photoInputs, containerW, SINGLE_DIGIT_TWO_PHOTO_HEIGHT, PHOTO_GAP, { forceLayout: 'side-by-side' });
+    return {
+      photos: embeddedPhotos,
+      imageLayout,
+      layoutWidth: imageLayout.containerWidth,
+      layoutHeight: imageLayout.containerHeight,
+      isHorizontal: true,
+    };
+  }
+
   const containerH = areaHeight ?? PHOTO_SLOT_MAX_HEIGHT;
-  const imageLayout = createImageLayout(
-    embeddedPhotos.map((photo) => ({ id: photo.id, width: photo.width, height: photo.height })),
-    containerW,
-    containerH,
-    PHOTO_GAP,
-    useFixedCells
-      ? { fixedCell: { cellWidth: SINGLE_DIGIT_PHOTO_CELL_W, cellHeight: SINGLE_DIGIT_PHOTO_CELL_H } }
-      : undefined,
-  );
+  // Compact template: with 2 photos prefer side-by-side so each photo gets the full
+  // slot width and looks larger, instead of the engine's default stack-vertical for
+  // landscape shots. Fall back to the engine's own choice (stacked for ultra-wides)
+  // when a photo is so wide that side-by-side slots would render it smaller.
+  const anyUltraWide = embeddedPhotos.some((photo) => photo.width / photo.height > 1.8);
+  const layoutOptions = embeddedPhotos.length === 2 && !anyUltraWide ? { forceLayout: 'side-by-side' as const } : undefined;
+  const imageLayout = createImageLayout(photoInputs, containerW, containerH, PHOTO_GAP, layoutOptions);
 
   return {
     photos: embeddedPhotos,
@@ -443,7 +473,7 @@ function measureSingleDigitBlockLayout(record: FamilyRecord, font: PDFFont, phot
   const tableHeight = tableLayout.height;
 
   const gapBadgePhoto = photoHeight ? 8 : 0;
-  const gapPhotoDetails = photoHeight && detailHeight ? 10 : 0;
+  const gapPhotoDetails = photoHeight && detailHeight ? SINGLE_DIGIT_PHOTO_DETAIL_GAP : 0;
   const gapDetailsTable = tableHeight ? TABLE_GAP : 0;
 
   const totalHeight = CODE_BADGE_HEIGHT + gapBadgePhoto + photoHeight + gapPhotoDetails + detailHeight + gapDetailsTable + tableHeight + TABLE_BOTTOM_PADDING + BLOCK_PADDING_BOTTOM;
@@ -884,10 +914,7 @@ async function drawSingleDigitFamilyBlock(
     const centeredPhotoX = photoX + (innerWidth - photoAreaWidth) / 2;
     await drawPhotoPanel(page, layout.photoLayout, centeredPhotoX, cursorY);
     cursorY -= layout.photoLayout.layoutHeight;
-  }
-
-  if (layout.photoLayout.photos.length > 0 && layout.tableHeight) {
-    cursorY -= 10;
+    cursorY -= SINGLE_DIGIT_PHOTO_DETAIL_GAP;
   }
 
   const detailResult = await drawDetailRows(page, loadAsset, record, layout.detailX, cursorY, font, boldFont, layout.detailRight);
@@ -1001,10 +1028,7 @@ async function drawOversizedFamilyBlock(
       const centeredPhotoX = photoX + (innerWidth - photoAreaWidth) / 2;
       await drawPhotoPanel(currentPage, layout.photoLayout, centeredPhotoX, cursorY);
       cursorY -= layout.photoLayout.layoutHeight;
-    }
-
-    if (layout.photoLayout.photos.length > 0 && layout.tableHeight) {
-      cursorY -= 10;
+      cursorY -= SINGLE_DIGIT_PHOTO_DETAIL_GAP;
     }
 
     const detailResult = await drawDetailRows(currentPage, loadAsset, record, layout.detailX, cursorY, font, boldFont, layout.detailRight);
