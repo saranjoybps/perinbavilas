@@ -12,6 +12,14 @@ import {
   PDFImage,
   PDFPage,
   StandardFonts,
+  appendBezierCurve,
+  clip,
+  closePath,
+  endPath,
+  lineTo,
+  moveTo,
+  popGraphicsState,
+  pushGraphicsState,
   rgb,
 } from 'pdf-lib';
 import { ImageLayoutResult, createImageLayout } from '@/services/family/image-layout-engine';
@@ -42,7 +50,6 @@ const GREEN_PALE = rgb(0.94, 0.97, 0.93);
 const TEXT = rgb(0.12, 0.12, 0.12);
 const WHITE = rgb(1, 1, 1);
 
-const BLOCK_GAP = 16;
 const BLOCK_PADDING_BOTTOM = 14;
 const BLOCK_PADDING_X = 14;
 const CODE_BADGE_HEIGHT = 26;
@@ -51,28 +58,33 @@ const CODE_BADGE_PADDING_X = 10;
 const CODE_BADGE_TEXT_SIZE = 16;
 const PHOTO_W = 126;
 const PHOTO_H = 88;
-// Compact (non-single-digit) template: photo area uses the left column efficiently.
-// Badge bottom sits 14px above the photo area (was 18px) to cut vertical whitespace.
-const PHOTO_TOP_OFFSET = 40;
+// Compact (non-single-digit) template: exactly 2 equal horizontal sections per page.
+const COMPACT_SECTION_GAP = 12;
+const COMPACT_SECTION_HEIGHT = Math.floor((PAGE_BLOCK_MAX_HEIGHT - COMPACT_SECTION_GAP) / 2);
+const COMPACT_HEADER_GAP = 6;
+const COMPACT_HEADER_HEIGHT = CODE_BADGE_HEIGHT + COMPACT_HEADER_GAP;
+const COMPACT_MIN_ROW2_HEIGHT = 72;
+const COMPACT_MIN_PHOTO_HEIGHT = 48;
+const LARGE_FAMILY_CHILD_THRESHOLD = 6;
 const DETAIL_ICON_SIZE = 10;
 const DETAIL_FONT = 9.5;
 const DETAIL_LABEL_WIDTH = 60;
 const DETAIL_ROW_GAP = 7.5;
 const DETAIL_LINE_HEIGHT = 11;
 const DETAIL_VALUE_X_GAP = 10;
+// Icon + label column + colon gap — fixed chrome; values use all width after this.
+const DETAIL_CHROME_WIDTH = DETAIL_ICON_SIZE + 6 + DETAIL_LABEL_WIDTH + DETAIL_VALUE_X_GAP;
 
 const TABLE_HEADER_HEIGHT = 19;
 const TABLE_ROW_HEIGHT = 18;
 const TABLE_GAP = 8;
 const TABLE_BOTTOM_PADDING = 10;
-// Compact (non-single-digit) template: photo container is wider (more of the left
-// column) with tighter spacing so photos render ~20-30% larger without raising the
-// card height (the vertical slot max grew only slightly, absorbed by the reduced
-// top offset above).
-const PHOTO_AREA_WIDTH = 250; // was 215 (compact template only)
-const PHOTO_SLOT_MAX_HEIGHT = 142; // was 132
 const PHOTO_GAP = 6; // shared with single-digit template - keep unchanged
-const PHOTO_DETAIL_GAP = 12; // was 18
+const PHOTO_DETAIL_GAP = 10;
+// Rounded green photo frame (visual only — does not change layout sizing)
+const PHOTO_FRAME_BORDER = 3.5;
+const PHOTO_FRAME_PADDING = 2.5;
+const PHOTO_FRAME_RADIUS = 10;
 // Single-family (single-digit code) template: photos size dynamically by count
 const SINGLE_DIGIT_SINGLE_PHOTO_HEIGHT = 240; // 1 photo: large centered portrait (220-260px)
 const SINGLE_DIGIT_TWO_PHOTO_HEIGHT = 185; // 2 photos: side-by-side (170-200px each)
@@ -294,18 +306,56 @@ function buildDetailRows(record: FamilyRecord): DetailRow[] {
   return rows.filter((row) => row.value.length > 0);
 }
 
+function isAddressDetailRow(row: DetailRow) {
+  return row.label === 'ADDRESS';
+}
+
+function getDetailValueLines(row: DetailRow, font: PDFFont, valueWidth: number) {
+  // Only ADDRESS wraps; all other fields stay on a single line whenever possible.
+  if (!isAddressDetailRow(row)) {
+    return [row.value];
+  }
+  return wrapText(row.value, font, DETAIL_FONT, Math.max(20, valueWidth));
+}
+
 function computeDetailLayout(record: FamilyRecord, font: PDFFont, valueWidth: number) {
   const rows = buildDetailRows(record);
 
   let height = 0;
   const rowHeights = rows.map((row) => {
-    const wrapped = wrapText(row.value, font, DETAIL_FONT, valueWidth);
-    const rowHeight = Math.max(DETAIL_LINE_HEIGHT, wrapped.length * 10.5) + DETAIL_ROW_GAP;
+    const lines = getDetailValueLines(row, font, valueWidth);
+    const rowHeight = Math.max(DETAIL_LINE_HEIGHT, lines.length * 10.5) + DETAIL_ROW_GAP;
     height += rowHeight;
     return rowHeight;
   });
 
   return { rows, rowHeights, height };
+}
+
+/** Width the details value column needs so non-address fields stay on one line. */
+function measurePreferredDetailWidth(record: FamilyRecord, font: PDFFont) {
+  const rows = buildDetailRows(record);
+  let maxValueWidth = 0;
+
+  for (const row of rows) {
+    if (isAddressDetailRow(row)) continue;
+
+    let valueWidth = measureTextWidth(font, row.value, DETAIL_FONT);
+    if (row.secondaryValue && row.secondaryLabel) {
+      const secondaryBlock =
+        24 +
+        DETAIL_ICON_SIZE + 4 +
+        measureTextWidth(font, row.secondaryLabel, DETAIL_FONT) +
+        measureTextWidth(font, ':', DETAIL_FONT) + 3 +
+        measureTextWidth(font, row.secondaryValue, DETAIL_FONT);
+      valueWidth += secondaryBlock;
+    }
+    maxValueWidth = Math.max(maxValueWidth, valueWidth);
+  }
+
+  // Chrome (icon/label) + widest single-line value + small right padding.
+  // Address may still wrap inside whatever width remains after images.
+  return DETAIL_CHROME_WIDTH + maxValueWidth + 8;
 }
 
 function getChildrenTableColumnWidths(tableWidth: number) {
@@ -343,18 +393,17 @@ interface PhotoLayoutInfo {
 
 type PhotoInfo = PhotoLayoutInfo['photos'][number];
 
-async function calculatePhotoLayout(
-  pdfDoc: PDFDocument,
-  record: FamilyRecord,
-  areaWidth?: number,
-  areaHeight?: number,
-  isSingleDigit = false,
-): Promise<PhotoLayoutInfo> {
+function isSingleDigitFamilyCode(code: string | number | null | undefined) {
+  return /^\d$/.test(String(code ?? '').trim());
+}
+
+function isLargeFamily(record: FamilyRecord) {
+  return (record.children?.length ?? 0) > LARGE_FAMILY_CHILD_THRESHOLD;
+}
+
+async function embedRecordPhotos(pdfDoc: PDFDocument, record: FamilyRecord): Promise<PhotoInfo[]> {
   const photos = getPhotos(record);
-  
-  if (photos.length === 0) {
-    return { photos: [], imageLayout: null, layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
-  }
+  if (photos.length === 0) return [];
 
   const embeddedPhotos: PhotoInfo[] = [];
   const seenContent = new Set<string>();
@@ -362,27 +411,273 @@ async function calculatePhotoLayout(
   for (const [index, photoPath] of photos.slice(0, 2).entries()) {
     try {
       const { image, width: origW, height: origH, contentHash } = await embedPhoto(pdfDoc, photoPath);
-
-      if (seenContent.has(contentHash)) {
-        continue;
-      }
+      if (seenContent.has(contentHash)) continue;
       seenContent.add(contentHash);
-
       embeddedPhotos.push({ id: `${index}`, image, width: origW, height: origH });
     } catch {
       // Skip photos that can't be loaded
     }
   }
 
+  return embeddedPhotos;
+}
+
+/**
+ * Image-first column sizing for compact Row 2.
+ * 1) Size images from count + aspect ratio (as large as the row height allows)
+ * 2) Assign ALL remaining width to family details — never a fixed details width
+ * 3) If preferred images would force non-address fields to wrap, shrink images
+ *    just enough so details can keep those fields on one line
+ * 4) Two landscape images → prefer vertical stack when it yields a larger display
+ *
+ * Supports 1–N images: each image is its own column (or stacked); details fill the rest.
+ */
+function computeImageFirstColumns(
+  photos: Array<{ width: number; height: number }>,
+  rowWidth: number,
+  rowHeight: number,
+  preferredDetailWidth = 0,
+): {
+  photoAreaWidth: number;
+  photoAreaHeight: number;
+  columnWidths: number[];
+  detailWidth: number;
+  displayHeight: number;
+  layoutMode: 'single' | 'side-by-side' | 'stack-vertical';
+  stackSlotHeight: number;
+} {
+  if (photos.length === 0 || rowHeight <= 0 || rowWidth <= 0) {
+    return {
+      photoAreaWidth: 0,
+      photoAreaHeight: 0,
+      columnWidths: [] as number[],
+      detailWidth: rowWidth,
+      displayHeight: 0,
+      layoutMode: 'single',
+      stackSlotHeight: 0,
+    };
+  }
+
+  const maxDetailCap = Math.max(
+    0,
+    rowWidth - PHOTO_DETAIL_GAP - photos.length * COMPACT_MIN_PHOTO_HEIGHT,
+  );
+  const targetDetailWidth = Math.min(Math.max(0, preferredDetailWidth), maxDetailCap);
+
+  const fitSideBySide = () => {
+    const gapsBetweenPhotos = Math.max(0, photos.length - 1) * PHOTO_GAP;
+    const idealWidths = photos.map((photo) => {
+      const aspect = Math.max(photo.width, 1) / Math.max(photo.height, 1);
+      return rowHeight * aspect;
+    });
+    const idealTotal = idealWidths.reduce((sum, width) => sum + width, 0);
+    const widthAfterPreferred = rowWidth - idealTotal - gapsBetweenPhotos - PHOTO_DETAIL_GAP;
+
+    let photoBudget = Math.max(0, rowWidth - PHOTO_DETAIL_GAP - gapsBetweenPhotos);
+    if (targetDetailWidth > 0 && widthAfterPreferred < targetDetailWidth) {
+      photoBudget = Math.max(0, rowWidth - targetDetailWidth - PHOTO_DETAIL_GAP - gapsBetweenPhotos);
+    }
+
+    const scale = idealTotal > 0 ? Math.min(1, photoBudget / idealTotal) : 1;
+    const columnWidths = idealWidths.map((width) => width * scale);
+    const photoAreaWidth = columnWidths.reduce((sum, width) => sum + width, 0) + gapsBetweenPhotos;
+    const displayHeight = Math.max(COMPACT_MIN_PHOTO_HEIGHT, rowHeight * scale);
+    const area = columnWidths.reduce((sum, width) => sum + width * displayHeight, 0);
+
+    return {
+      photoAreaWidth,
+      photoAreaHeight: rowHeight,
+      columnWidths,
+      detailWidth: Math.max(0, rowWidth - photoAreaWidth - PHOTO_DETAIL_GAP),
+      displayHeight,
+      layoutMode: (photos.length === 1 ? 'single' : 'side-by-side') as 'single' | 'side-by-side',
+      stackSlotHeight: 0,
+      area,
+    };
+  };
+
+  const fitStacked = () => {
+    const slotHeight = Math.max(COMPACT_MIN_PHOTO_HEIGHT, (rowHeight - PHOTO_GAP) / 2);
+    const idealWidths = photos.map((photo) => {
+      const aspect = Math.max(photo.width, 1) / Math.max(photo.height, 1);
+      return slotHeight * aspect;
+    });
+    // Stacked images share one column width (wide enough for the wider landscape).
+    const idealColumnWidth = Math.max(...idealWidths);
+    const widthAfterPreferred = rowWidth - idealColumnWidth - PHOTO_DETAIL_GAP;
+
+    let photoBudget = Math.max(0, rowWidth - PHOTO_DETAIL_GAP);
+    if (targetDetailWidth > 0 && widthAfterPreferred < targetDetailWidth) {
+      photoBudget = Math.max(0, rowWidth - targetDetailWidth - PHOTO_DETAIL_GAP);
+    }
+
+    const scale = idealColumnWidth > 0 ? Math.min(1, photoBudget / idealColumnWidth) : 1;
+    const photoAreaWidth = idealColumnWidth * scale;
+    const displayHeight = slotHeight * scale;
+    const area = photos.length * photoAreaWidth * displayHeight;
+
+    return {
+      photoAreaWidth,
+      photoAreaHeight: rowHeight,
+      columnWidths: [photoAreaWidth],
+      detailWidth: Math.max(0, rowWidth - photoAreaWidth - PHOTO_DETAIL_GAP),
+      displayHeight,
+      layoutMode: 'stack-vertical' as const,
+      stackSlotHeight: displayHeight,
+      area,
+    };
+  };
+
+  const sideBySide = fitSideBySide();
+  const bothLandscape = photos.length === 2 && photos.every((photo) => photo.width / Math.max(photo.height, 1) > 1.2);
+
+  if (bothLandscape) {
+    const stacked = fitStacked();
+    if (stacked.area > sideBySide.area) {
+      return stacked;
+    }
+  }
+
+  return sideBySide;
+}
+
+function buildColumnPhotoLayout(
+  embeddedPhotos: PhotoInfo[],
+  columnWidths: number[],
+  rowHeight: number,
+  displayHeight: number,
+  layoutMode: 'single' | 'side-by-side' | 'stack-vertical' = 'side-by-side',
+  stackSlotHeight = 0,
+): PhotoLayoutInfo {
+  if (embeddedPhotos.length === 0 || columnWidths.length === 0) {
+    return { photos: [], imageLayout: null, layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
+  }
+
+  if (layoutMode === 'stack-vertical' && embeddedPhotos.length >= 2) {
+    const photoAreaWidth = columnWidths[0] ?? 0;
+    const slotHeight = stackSlotHeight > 0 ? stackSlotHeight : Math.max(1, (rowHeight - PHOTO_GAP) / 2);
+    const topSlotY = rowHeight - slotHeight;
+    const bottomSlotY = 0;
+
+    const placements = embeddedPhotos.slice(0, 2).map((photo, index) => {
+      const slotY = index === 0 ? topSlotY : bottomSlotY;
+      const aspect = Math.max(photo.width, 1) / Math.max(photo.height, 1);
+      let drawHeight = Math.min(displayHeight, slotHeight);
+      let drawWidth = drawHeight * aspect;
+      if (drawWidth > photoAreaWidth) {
+        drawWidth = photoAreaWidth;
+        drawHeight = drawWidth / aspect;
+      }
+      // Top-align within each stack slot (PDF y grows upward inside the panel).
+      const drawY = slotY + slotHeight - drawHeight;
+      const drawX = (photoAreaWidth - drawWidth) / 2;
+      return {
+        imageId: photo.id,
+        x: 0,
+        y: slotY,
+        width: photoAreaWidth,
+        height: slotHeight,
+        drawX,
+        drawY,
+        drawWidth,
+        drawHeight,
+        cropRect: { x: 0, y: 0, width: photo.width, height: photo.height },
+      };
+    });
+
+    return {
+      photos: embeddedPhotos,
+      imageLayout: {
+        selectedLayout: 'stack-vertical',
+        containerWidth: photoAreaWidth,
+        containerHeight: rowHeight,
+        images: embeddedPhotos.map((photo) => ({
+          id: photo.id,
+          width: photo.width,
+          height: photo.height,
+          aspectRatio: photo.width / Math.max(photo.height, 1),
+          type: 'landscape' as const,
+        })),
+        placements,
+      },
+      layoutWidth: photoAreaWidth,
+      layoutHeight: rowHeight,
+      isHorizontal: false,
+    };
+  }
+
+  const photoAreaWidth = columnWidths.reduce((sum, width, index) => (
+    sum + width + (index > 0 ? PHOTO_GAP : 0)
+  ), 0);
+
+  let x = 0;
+  const placements = embeddedPhotos.map((photo, index) => {
+    const slotWidth = columnWidths[index] ?? columnWidths[columnWidths.length - 1];
+    const slotHeight = rowHeight;
+    const aspect = Math.max(photo.width, 1) / Math.max(photo.height, 1);
+    let drawHeight = Math.min(displayHeight, slotHeight);
+    let drawWidth = drawHeight * aspect;
+    if (drawWidth > slotWidth) {
+      drawWidth = slotWidth;
+      drawHeight = drawWidth / aspect;
+    }
+    const drawX = x + (slotWidth - drawWidth) / 2;
+    // Top-align with family details — same Row 2 baseline.
+    const drawY = slotHeight - drawHeight;
+    const placement = {
+      imageId: photo.id,
+      x,
+      y: 0,
+      width: slotWidth,
+      height: slotHeight,
+      drawX,
+      drawY,
+      drawWidth,
+      drawHeight,
+      cropRect: { x: 0, y: 0, width: photo.width, height: photo.height },
+    };
+    x += slotWidth + PHOTO_GAP;
+    return placement;
+  });
+
+  return {
+    photos: embeddedPhotos,
+    imageLayout: {
+      selectedLayout: embeddedPhotos.length === 1 ? 'image-detail' : 'images-detail',
+      containerWidth: photoAreaWidth,
+      containerHeight: rowHeight,
+      images: embeddedPhotos.map((photo) => ({
+        id: photo.id,
+        width: photo.width,
+        height: photo.height,
+        aspectRatio: photo.width / Math.max(photo.height, 1),
+        type: 'square' as const,
+      })),
+      placements,
+    },
+    layoutWidth: photoAreaWidth,
+    layoutHeight: rowHeight,
+    isHorizontal: embeddedPhotos.length > 1,
+  };
+}
+
+async function calculatePhotoLayout(
+  pdfDoc: PDFDocument,
+  record: FamilyRecord,
+  areaWidth?: number,
+  areaHeight?: number,
+  isSingleDigit = false,
+): Promise<PhotoLayoutInfo> {
+  const embeddedPhotos = await embedRecordPhotos(pdfDoc, record);
+
   if (embeddedPhotos.length === 0) {
     return { photos: [], imageLayout: null, layoutWidth: 0, layoutHeight: 0, isHorizontal: false };
   }
 
   const photoInputs = embeddedPhotos.map((photo) => ({ id: photo.id, width: photo.width, height: photo.height }));
-  const containerW = areaWidth ?? (isSingleDigit ? CONTENT_WIDTH - BLOCK_PADDING_X * 2 : PHOTO_AREA_WIDTH);
+  const containerW = areaWidth ?? (CONTENT_WIDTH - BLOCK_PADDING_X * 2);
 
   if (isSingleDigit) {
-    // Single-family template: size the image container dynamically by photo count.
     if (embeddedPhotos.length === 1) {
       const imageLayout = createImageLayout(photoInputs, containerW, SINGLE_DIGIT_SINGLE_PHOTO_HEIGHT, PHOTO_GAP);
       return {
@@ -404,22 +699,17 @@ async function calculatePhotoLayout(
     };
   }
 
-  const containerH = areaHeight ?? PHOTO_SLOT_MAX_HEIGHT;
-  // Compact template: with 2 photos prefer side-by-side so each photo gets the full
-  // slot width and looks larger, instead of the engine's default stack-vertical for
-  // landscape shots. Fall back to the engine's own choice (stacked for ultra-wides)
-  // when a photo is so wide that side-by-side slots would render it smaller.
-  const anyUltraWide = embeddedPhotos.some((photo) => photo.width / photo.height > 1.8);
-  const layoutOptions = embeddedPhotos.length === 2 && !anyUltraWide ? { forceLayout: 'side-by-side' as const } : undefined;
-  const imageLayout = createImageLayout(photoInputs, containerW, containerH, PHOTO_GAP, layoutOptions);
-
-  return {
-    photos: embeddedPhotos,
-    imageLayout,
-    layoutWidth: imageLayout.containerWidth,
-    layoutHeight: imageLayout.containerHeight,
-    isHorizontal: imageLayout.selectedLayout === 'side-by-side' || imageLayout.selectedLayout === 'portrait-beside-landscape',
-  };
+  // Compact path uses measureCompactFamilyBlockLayout + image-first columns instead.
+  const rowHeight = areaHeight ?? COMPACT_MIN_ROW2_HEIGHT;
+  const columns = computeImageFirstColumns(embeddedPhotos, containerW, rowHeight, 0);
+  return buildColumnPhotoLayout(
+    embeddedPhotos,
+    columns.columnWidths,
+    rowHeight,
+    columns.displayHeight,
+    columns.layoutMode,
+    columns.stackSlotHeight,
+  );
 }
 
 type FamilyBlockLayout = {
@@ -430,31 +720,137 @@ type FamilyBlockLayout = {
   topSectionHeight: number;
   tableHeight: number;
   tableRowHeights: number[];
+  photoAreaWidth?: number;
+  row2Height?: number;
+  tableTopOffset?: number;
 };
 
-function measureFamilyBlockLayout(record: FamilyRecord, font: PDFFont, photoLayout: PhotoLayoutInfo): FamilyBlockLayout {
+function scaleChildrenRowHeightsToFit(rowHeights: number[], maxBodyHeight: number) {
+  if (rowHeights.length === 0) return rowHeights;
+  const natural = rowHeights.reduce((sum, height) => sum + height, 0);
+  if (natural <= maxBodyHeight || natural <= 0) return rowHeights;
+
+  const scale = maxBodyHeight / natural;
+  const scaled = rowHeights.map((height) => Math.max(1, Math.floor(height * scale)));
+  let total = scaled.reduce((sum, height) => sum + height, 0);
+  let guard = 0;
+  while (total > maxBodyHeight && guard < scaled.length * 4) {
+    const idx = guard % scaled.length;
+    if (scaled[idx] > 1) {
+      scaled[idx] -= 1;
+      total -= 1;
+    }
+    guard += 1;
+  }
+  return scaled;
+}
+
+function measureCompactFamilyBlockLayout(
+  record: FamilyRecord,
+  font: PDFFont,
+  embeddedPhotos: PhotoInfo[],
+  sectionHeight: number,
+): FamilyBlockLayout {
   const innerWidth = CONTENT_WIDTH - BLOCK_PADDING_X * 2;
   const photoX = CONTENT_MARGIN_X + BLOCK_PADDING_X;
   const contentRight = photoX + innerWidth;
-  const hasPhotos = photoLayout.photos.length > 0;
-  const detailX = hasPhotos ? photoX + PHOTO_AREA_WIDTH + PHOTO_DETAIL_GAP : photoX;
-  const detailRight = contentRight;
-  const valueX = detailX + DETAIL_ICON_SIZE + 6 + DETAIL_LABEL_WIDTH + DETAIL_VALUE_X_GAP;
-  const detailValueWidth = Math.max(80, detailRight - valueX - 8);
-  const detailLayout = computeDetailLayout(record, font, detailValueWidth);
-  const topSectionHeight = Math.max(photoLayout.layoutHeight, detailLayout.height);
-  const tableLayout = computeChildrenTableLayout(record, font, innerWidth);
-  const tableHeight = tableLayout.height;
-  const blockHeight = PHOTO_TOP_OFFSET + topSectionHeight + (tableHeight ? TABLE_GAP + tableHeight : 0) + BLOCK_PADDING_BOTTOM;
+  const hasPhotos = embeddedPhotos.length > 0;
+  const hasChildren = (record.children?.length ?? 0) > 0;
+  const headerHeight = COMPACT_HEADER_HEIGHT;
+  const availableBelowHeader = Math.max(0, sectionHeight - headerHeight - BLOCK_PADDING_BOTTOM);
+
+  // --- No images: skip image container entirely. Details are full-width and
+  // content-sized; children sit directly underneath with only TABLE_GAP. ---
+  if (!hasPhotos) {
+    const detailValueWidth = Math.max(20, innerWidth - DETAIL_CHROME_WIDTH);
+    const detailLayout = computeDetailLayout(record, font, detailValueWidth);
+    const detailHeight = Math.max(DETAIL_LINE_HEIGHT, detailLayout.height);
+    const tableChrome = hasChildren ? TABLE_GAP + TABLE_HEADER_HEIGHT + TABLE_BOTTOM_PADDING : 0;
+    const tableBodyBudget = hasChildren
+      ? Math.max(0, availableBelowHeader - detailHeight - tableChrome)
+      : 0;
+
+    const naturalTable = computeChildrenTableLayout(record, font, innerWidth);
+    const tableRowHeights = hasChildren
+      ? scaleChildrenRowHeightsToFit(
+        naturalTable.rowHeights,
+        Math.min(naturalTable.height - TABLE_HEADER_HEIGHT - TABLE_BOTTOM_PADDING, tableBodyBudget),
+      )
+      : [];
+    const scaledBody = tableRowHeights.reduce((sum, height) => sum + height, 0);
+    const tableHeight = hasChildren
+      ? TABLE_HEADER_HEIGHT + scaledBody + TABLE_BOTTOM_PADDING
+      : 0;
+
+    return {
+      blockHeight: sectionHeight,
+      photoLayout: { photos: [], imageLayout: null, layoutWidth: 0, layoutHeight: 0, isHorizontal: false },
+      detailX: photoX,
+      detailRight: contentRight,
+      topSectionHeight: detailHeight,
+      tableHeight,
+      tableRowHeights,
+      photoAreaWidth: 0,
+      row2Height: detailHeight,
+      tableTopOffset: headerHeight + detailHeight + (hasChildren ? TABLE_GAP : 0),
+    };
+  }
+
+  // --- Has images: keep equal half-page image+details row, then children. ---
+  const naturalTable = computeChildrenTableLayout(record, font, innerWidth);
+  const tableChrome = hasChildren ? TABLE_GAP + TABLE_HEADER_HEIGHT + TABLE_BOTTOM_PADDING : 0;
+
+  let tableBodyBudget = hasChildren
+    ? Math.min(naturalTable.height - TABLE_HEADER_HEIGHT - TABLE_BOTTOM_PADDING, Math.max(0, availableBelowHeader - tableChrome - COMPACT_MIN_ROW2_HEIGHT))
+    : 0;
+
+  if (hasChildren && isLargeFamily(record)) {
+    // Large families must fit entirely on one page — give the table what it needs,
+    // then shrink photo row (and row heights if still short).
+    const neededBody = naturalTable.height - TABLE_HEADER_HEIGHT - TABLE_BOTTOM_PADDING;
+    const maxBody = Math.max(0, availableBelowHeader - tableChrome - COMPACT_MIN_PHOTO_HEIGHT);
+    tableBodyBudget = Math.min(neededBody, maxBody);
+  }
+
+  const tableRowHeights = hasChildren
+    ? scaleChildrenRowHeightsToFit(naturalTable.rowHeights, tableBodyBudget)
+    : [];
+  const scaledBody = tableRowHeights.reduce((sum, height) => sum + height, 0);
+  const tableHeight = hasChildren
+    ? TABLE_HEADER_HEIGHT + scaledBody + TABLE_BOTTOM_PADDING
+    : 0;
+
+  const row2Height = Math.max(
+    COMPACT_MIN_PHOTO_HEIGHT,
+    availableBelowHeader - (hasChildren ? TABLE_GAP + tableHeight : 0),
+  );
+
+  const columns = computeImageFirstColumns(
+    embeddedPhotos,
+    innerWidth,
+    row2Height,
+    measurePreferredDetailWidth(record, font),
+  );
+  const photoLayout = buildColumnPhotoLayout(
+    embeddedPhotos,
+    columns.columnWidths,
+    row2Height,
+    columns.displayHeight,
+    columns.layoutMode,
+    columns.stackSlotHeight,
+  );
 
   return {
-    blockHeight: Math.ceil(blockHeight),
+    blockHeight: sectionHeight,
     photoLayout,
-    detailX,
-    detailRight,
-    topSectionHeight,
+    detailX: photoX + columns.photoAreaWidth + PHOTO_DETAIL_GAP,
+    detailRight: contentRight,
+    topSectionHeight: row2Height,
     tableHeight,
-    tableRowHeights: tableLayout.rowHeights,
+    tableRowHeights,
+    photoAreaWidth: columns.photoAreaWidth,
+    row2Height,
+    tableTopOffset: headerHeight + row2Height + (hasChildren ? TABLE_GAP : 0),
   };
 }
 
@@ -489,21 +885,6 @@ function measureSingleDigitBlockLayout(record: FamilyRecord, font: PDFFont, phot
   };
 }
 
-async function measureFamilyBlock(
-  pdfDoc: PDFDocument,
-  record: FamilyRecord,
-  font: PDFFont,
-  photoAreaOverrides?: { areaWidth?: number; areaHeight?: number },
-) {
-  const photoLayout = await calculatePhotoLayout(
-    pdfDoc,
-    record,
-    photoAreaOverrides?.areaWidth,
-    photoAreaOverrides?.areaHeight,
-  );
-  return measureFamilyBlockLayout(record, font, photoLayout);
-}
-
 function roundedRectPath(x: number, y: number, width: number, height: number, radius: number) {
   const right = x + width;
   const top = y + height;
@@ -524,6 +905,27 @@ function roundedRectPath(x: number, y: number, width: number, height: number, ra
   ].join(' ');
 }
 
+/** PDF-space rounded rect operators (y-up) for clipping family photos. */
+function roundedRectClipOperators(x: number, y: number, width: number, height: number, radius: number) {
+  const r = Math.min(radius, width / 2, height / 2);
+  const c = r * 0.5522847498;
+  const right = x + width;
+  const top = y + height;
+
+  return [
+    moveTo(x + r, y),
+    lineTo(right - r, y),
+    appendBezierCurve(right - r + c, y, right, y + r - c, right, y + r),
+    lineTo(right, top - r),
+    appendBezierCurve(right, top - r + c, right - r + c, top, right - r, top),
+    lineTo(x + r, top),
+    appendBezierCurve(x + r - c, top, x, top - r + c, x, top - r),
+    lineTo(x, y + r),
+    appendBezierCurve(x, y + r - c, x + r - c, y, x + r, y),
+    closePath(),
+  ];
+}
+
 function drawRoundedBorder(page: PDFPage, x: number, y: number, width: number, height: number, radius: number, borderWidth: number) {
   page.drawSvgPath(roundedRectPath(0, 0, width, height, radius), {
     x,
@@ -531,6 +933,57 @@ function drawRoundedBorder(page: PDFPage, x: number, y: number, width: number, h
     borderColor: GREEN,
     borderWidth,
   });
+}
+
+/**
+ * Draw a family photo with a green rounded frame.
+ * Frame fits inside the existing image rect so layout/sizing stay unchanged.
+ */
+function drawFramedPhoto(
+  page: PDFPage,
+  image: PDFImage,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const minSide = Math.min(width, height);
+  if (minSide < PHOTO_FRAME_BORDER * 2 + PHOTO_FRAME_PADDING * 2 + 8) {
+    page.drawImage(image, { x, y, width, height });
+    return;
+  }
+
+  const radius = Math.min(PHOTO_FRAME_RADIUS, minSide / 4);
+  // Keep the full stroke inside the layout rect; leave padding between stroke and image.
+  const borderInset = PHOTO_FRAME_BORDER / 2;
+  const imageInset = PHOTO_FRAME_BORDER + PHOTO_FRAME_PADDING;
+  const imgX = x + imageInset;
+  const imgY = y + imageInset;
+  const imgW = width - imageInset * 2;
+  const imgH = height - imageInset * 2;
+  const imageRadius = Math.max(1, radius - imageInset + borderInset);
+
+  const frameX = x + borderInset;
+  const frameY = y + borderInset;
+  const frameW = width - PHOTO_FRAME_BORDER;
+  const frameH = height - PHOTO_FRAME_BORDER;
+
+  // Clip image to rounded rect (overflow: hidden equivalent).
+  page.pushOperators(
+    pushGraphicsState(),
+    ...roundedRectClipOperators(imgX, imgY, imgW, imgH, imageRadius),
+    clip(),
+    endPath(),
+  );
+  page.drawImage(image, {
+    x: imgX,
+    y: imgY,
+    width: imgW,
+    height: imgH,
+  });
+  page.pushOperators(popGraphicsState());
+
+  drawRoundedBorder(page, frameX, frameY, frameW, frameH, radius, PHOTO_FRAME_BORDER);
 }
 
 async function drawDecorativeBorder(page: PDFPage) {
@@ -656,12 +1109,14 @@ async function drawPhotoPanel(
       continue;
     }
 
-    page.drawImage(photo.image, {
-      x: x + placement.drawX,
-      y: layoutBottomY + placement.drawY,
-      width: placement.drawWidth,
-      height: placement.drawHeight,
-    });
+    drawFramedPhoto(
+      page,
+      photo.image,
+      x + placement.drawX,
+      layoutBottomY + placement.drawY,
+      placement.drawWidth,
+      placement.drawHeight,
+    );
   }
 
   return { width: photoLayout.layoutWidth, height: photoLayout.layoutHeight };
@@ -677,9 +1132,9 @@ async function drawDetailRows(
   boldFont: PDFFont,
   rightX: number,
 ) {
-  const innerRight = rightX;
-  const valueX = x + DETAIL_ICON_SIZE + 6 + DETAIL_LABEL_WIDTH + DETAIL_VALUE_X_GAP;
-  const valueWidth = Math.max(80, innerRight - valueX - 8);
+  // Value column uses 100% of the remaining width after icon + label chrome.
+  const valueX = x + DETAIL_CHROME_WIDTH;
+  const valueWidth = Math.max(20, rightX - valueX);
   const { rows, rowHeights, height } = computeDetailLayout(record, font, valueWidth);
   const iconSize = 11;
   let currentTop = yTop;
@@ -688,7 +1143,7 @@ async function drawDetailRows(
     const row = rows[i];
     const rowHeight = rowHeights[i];
     const rowBottom = currentTop - rowHeight;
-    const wrapped = wrapText(row.value, font, DETAIL_FONT, valueWidth);
+    const lines = getDetailValueLines(row, font, valueWidth);
 
     const icon = await loadAsset(row.icon);
     page.drawImage(icon, {
@@ -715,7 +1170,7 @@ async function drawDetailRows(
     });
 
     let lineY = currentTop - 7.0;
-    for (const line of wrapped) {
+    for (const line of lines) {
       page.drawText(line, {
         x: valueX,
         y: lineY,
@@ -937,31 +1392,33 @@ async function drawFamilyBlock(
   loadAsset: ReturnType<typeof createAssetLoader>,
   layout: FamilyBlockLayout,
 ) {
-  if (/^\d$/.test(String(record.code).trim())) {
+  if (isSingleDigitFamilyCode(record.code)) {
     return drawSingleDigitFamilyBlock(page, record, startY, font, boldFont, loadAsset, layout);
   }
 
+  // Compact template: 3 equal-purpose rows within a fixed half/full-page section.
+  // Row 1 — family code header; Row 2 — images + details; Row 3 — children table.
   const innerWidth = CONTENT_WIDTH - BLOCK_PADDING_X * 2;
   const photoX = CONTENT_MARGIN_X + BLOCK_PADDING_X;
-  
   const blockHeight = layout.blockHeight;
   const blockTop = startY;
   const blockBottom = blockTop - blockHeight;
+  const row2Top = blockTop - COMPACT_HEADER_HEIGHT;
+  const row2Height = layout.row2Height ?? layout.topSectionHeight;
 
   await drawCodeBadge(page, photoX, blockTop, record.code, boldFont);
-  
-  await drawPhotoPanel(page, layout.photoLayout, photoX, blockTop - PHOTO_TOP_OFFSET);
-  
-  const detailTop = blockTop - PHOTO_TOP_OFFSET;
-  const detailLayoutBottom = await drawDetailRows(page, loadAsset, record, layout.detailX, detailTop, font, boldFont, layout.detailRight);
 
-  const topSectionBottom = Math.min(
-    blockTop - PHOTO_TOP_OFFSET - layout.photoLayout.layoutHeight,
-    detailLayoutBottom.bottomY
-  );
+  if (layout.photoLayout.photos.length > 0) {
+    await drawPhotoPanel(page, layout.photoLayout, photoX, row2Top);
+  }
+
+  await drawDetailRows(page, loadAsset, record, layout.detailX, row2Top, font, boldFont, layout.detailRight);
 
   if (record.children?.length) {
-    drawChildrenTable(page, record, photoX, topSectionBottom - TABLE_GAP, innerWidth, font, boldFont, layout.tableRowHeights);
+    const tableTop = layout.tableTopOffset != null
+      ? blockTop - layout.tableTopOffset
+      : row2Top - row2Height - TABLE_GAP;
+    drawChildrenTable(page, record, photoX, tableTop, innerWidth, font, boldFont, layout.tableRowHeights);
   }
 
   return blockBottom;
@@ -985,7 +1442,7 @@ async function drawOversizedFamilyBlock(
   let lastBlockBottom = startY;
   const childCount = record.children?.length ?? 0;
 
-  const isSingleDigitCode = /^\d$/.test(String(record.code).trim());
+  const isSingleDigitCode = isSingleDigitFamilyCode(record.code);
   let badgeX = photoX;
   if (isSingleDigitCode) {
     const badgeText = `CODE ${record.code}`;
@@ -996,7 +1453,7 @@ async function drawOversizedFamilyBlock(
   const topSectionHeight = layout.topSectionHeight;
   const firstPageBaseHeight = isSingleDigitCode
     ? layout.blockHeight - (layout.tableHeight ? TABLE_GAP + layout.tableHeight + TABLE_BOTTOM_PADDING : 0)
-    : PHOTO_TOP_OFFSET + topSectionHeight + BLOCK_PADDING_BOTTOM;
+    : COMPACT_HEADER_HEIGHT + topSectionHeight + BLOCK_PADDING_BOTTOM;
   const firstPageAvailable = currentStartY - PAGE_BLOCK_BOTTOM;
 
   if (firstPageAvailable < Math.min(firstPageBaseHeight, PAGE_BLOCK_MAX_HEIGHT)) {
@@ -1040,9 +1497,9 @@ async function drawOversizedFamilyBlock(
     }
   } else {
     await drawCodeBadge(currentPage, photoX, currentStartY, record.code, boldFont);
-    await drawPhotoPanel(currentPage, layout.photoLayout, photoX, currentStartY - PHOTO_TOP_OFFSET);
+    await drawPhotoPanel(currentPage, layout.photoLayout, photoX, currentStartY - COMPACT_HEADER_HEIGHT);
 
-    const detailTop = currentStartY - PHOTO_TOP_OFFSET;
+    const detailTop = currentStartY - COMPACT_HEADER_HEIGHT;
     await drawDetailRows(currentPage, loadAsset, record, layout.detailX, detailTop, font, boldFont, layout.detailRight);
 
     if (firstSegmentHasTable) {
@@ -1050,7 +1507,7 @@ async function drawOversizedFamilyBlock(
         currentPage,
         record,
         photoX,
-        currentStartY - PHOTO_TOP_OFFSET - topSectionHeight - TABLE_GAP,
+        currentStartY - COMPACT_HEADER_HEIGHT - topSectionHeight - TABLE_GAP,
         innerWidth,
         font,
         boldFont,
@@ -1068,7 +1525,7 @@ async function drawOversizedFamilyBlock(
     await drawDecorativeBorder(currentPage);
     currentStartY = PAGE_BLOCK_TOP;
 
-    const topOffset = isSingleDigitCode ? CODE_BADGE_HEIGHT + 8 : PHOTO_TOP_OFFSET;
+    const topOffset = isSingleDigitCode ? CODE_BADGE_HEIGHT + 8 : COMPACT_HEADER_HEIGHT;
     const rowsAvailable = PAGE_BLOCK_MAX_HEIGHT - topOffset - TABLE_HEADER_HEIGHT - TABLE_BOTTOM_PADDING;
     const rowsOnPage = countRowsThatFit(layout.tableRowHeights, nextChildIndex, rowsAvailable);
     const rowsHeight = sumRowHeights(layout.tableRowHeights, nextChildIndex, rowsOnPage);
@@ -1205,146 +1662,129 @@ export async function generateFamilyDirectoryPDF(records: FamilyRecord[], title:
   await drawCoverPage(pdfDoc, introImage);
   await drawIntroductionPages(pdfDoc, font);
 
-  // Two-pass layout: 1) measure all blocks, 2) paginate and compute leftover space,
-  // 3) for pages with 1-2 cards apply a modest scale to photo area and re-measure.
+  // Pass 1: embed photos once, then measure each block.
+  // Non-single-digit families use fixed half-page (or full-page for >6 children) sections.
+  const embeddedPhotosByIndex: PhotoInfo[][] = [];
   const measuredLayouts: FamilyBlockLayout[] = [];
+
   for (const record of records) {
-    const isSingleDigit = /^\d$/.test(String(record.code).trim());
-    const photoLayout = await calculatePhotoLayout(pdfDoc, record, undefined, undefined, isSingleDigit);
-    const layout = isSingleDigit
-      ? measureSingleDigitBlockLayout(record, font, photoLayout)
-      : measureFamilyBlockLayout(record, font, photoLayout);
-    measuredLayouts.push(layout);
-  }
-
-  // Simulate pagination to group record indices into pages
-  const pages: number[][] = [];
-  let currentPage: number[] = [];
-  let used = 0;
-  for (let i = 0; i < records.length; i += 1) {
-    const record = records[i];
-    const h = measuredLayouts[i].blockHeight;
-    const gap = currentPage.length > 0 ? BLOCK_GAP : 0;
-    const isSingleDigitCode = /^\d$/.test(String(record.code).trim());
-
-    if (isSingleDigitCode) {
-      if (currentPage.length > 0) pages.push(currentPage);
-      currentPage = [i];
-      used = PAGE_BLOCK_MAX_HEIGHT + 1;
-    } else if (used + gap + h > PAGE_BLOCK_MAX_HEIGHT) {
-      if (currentPage.length > 0) pages.push(currentPage);
-      currentPage = [i];
-      used = h;
-    } else {
-      currentPage.push(i);
-      used += gap + h;
-    }
-  }
-  if (currentPage.length > 0) pages.push(currentPage);
-
-  // Adjust layouts for pages with spare vertical space (1 or 2 cards)
-  const baselinePhotoArea = PHOTO_AREA_WIDTH * PHOTO_SLOT_MAX_HEIGHT;
-  for (const pageIndices of pages) {
-    const n = pageIndices.length;
-    if (n === 0) continue;
-    const gapsTotal = Math.max(0, n - 1) * BLOCK_GAP;
-    const sumHeights = pageIndices.reduce((s, idx) => s + measuredLayouts[idx].blockHeight, 0);
-    const remainingSpace = PAGE_BLOCK_MAX_HEIGHT - (sumHeights + gapsTotal);
-
-    if (remainingSpace <= 8) continue; // ignore tiny amounts
-
-    if (n === 1 || n === 2) {
-      // allocate a portion of remaining space to photo area growth
-      const desiredExtra = remainingSpace * 0.6; // 60% goes to photos/top area
-      const perCardExtra = desiredExtra / n;
-      const scale = 1 + Math.min(0.2, perCardExtra / Math.max(1, baselinePhotoArea * 0.5));
-
-      if (scale > 1.01) {
-        // re-measure affected records with scaled photo area
-        for (const idx of pageIndices) {
-          const record = records[idx];
-          if (/^\d$/.test(String(record.code).trim())) continue;
-          const oldLayout = measuredLayouts[idx];
-          const newAreaW = Math.round(PHOTO_AREA_WIDTH * scale);
-          const newAreaH = Math.round(PHOTO_SLOT_MAX_HEIGHT * scale);
-          const newLayout = await measureFamilyBlock(pdfDoc, records[idx], font, { areaWidth: newAreaW, areaHeight: newAreaH });
-          // ensure we didn't overflow the page block max height; if so, keep old layout
-          if (newLayout.blockHeight <= PAGE_BLOCK_MAX_HEIGHT) {
-            measuredLayouts[idx] = newLayout;
-          } else {
-            measuredLayouts[idx] = oldLayout;
-          }
-        }
-      }
-    }
-  }
-
-  // Drawing pass using adjusted measuredLayouts
-  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  await drawDecorativeBorder(page);
-  let cursorY = PAGE_BLOCK_TOP;
-
-  for (let i = 0; i < records.length; i += 1) {
-    const record = records[i];
-    const layout = measuredLayouts[i];
-    const requiredHeight = layout.blockHeight;
-    const isSingleDigitCode = /^\d$/.test(String(record.code).trim());
-
-    if (isSingleDigitCode) {
-      if (requiredHeight <= PAGE_BLOCK_MAX_HEIGHT) {
-        const centeredY = PAGE_BLOCK_TOP - (PAGE_BLOCK_MAX_HEIGHT - requiredHeight) / 2;
-        if (centeredY - requiredHeight >= PAGE_BLOCK_BOTTOM) {
-          if (cursorY >= PAGE_BLOCK_TOP) {
-            cursorY = centeredY;
-          } else {
-            page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-            await drawDecorativeBorder(page);
-            cursorY = centeredY;
-          }
-        } else if (cursorY < PAGE_BLOCK_TOP) {
-          page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-          await drawDecorativeBorder(page);
-          cursorY = PAGE_BLOCK_TOP;
-        }
-      } else if (cursorY < PAGE_BLOCK_TOP) {
-        page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-        await drawDecorativeBorder(page);
-        cursorY = PAGE_BLOCK_TOP;
-      }
-    }
-
-    if (requiredHeight > PAGE_BLOCK_MAX_HEIGHT) {
-      const result = await drawOversizedFamilyBlock(
-        pdfDoc,
-        page,
-        record,
-        cursorY,
-        font,
-        boldFont,
-        loadAsset,
-        layout,
-      );
-      page = result.page;
-      cursorY = isSingleDigitCode ? PAGE_BLOCK_BOTTOM : result.cursorY - BLOCK_GAP;
+    const isSingleDigit = isSingleDigitFamilyCode(record.code);
+    if (isSingleDigit) {
+      embeddedPhotosByIndex.push([]);
+      const photoLayout = await calculatePhotoLayout(pdfDoc, record, undefined, undefined, true);
+      measuredLayouts.push(measureSingleDigitBlockLayout(record, font, photoLayout));
       continue;
     }
 
-    if (cursorY - requiredHeight < PAGE_BLOCK_BOTTOM) {
-      page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      await drawDecorativeBorder(page);
-      cursorY = PAGE_BLOCK_TOP;
+    const embeddedPhotos = await embedRecordPhotos(pdfDoc, record);
+    embeddedPhotosByIndex.push(embeddedPhotos);
+    // Provisional height — finalized after pagination decides solo vs paired.
+    const provisionalHeight = isLargeFamily(record) ? PAGE_BLOCK_MAX_HEIGHT : COMPACT_SECTION_HEIGHT;
+    measuredLayouts.push(measureCompactFamilyBlockLayout(record, font, embeddedPhotos, provisionalHeight));
+  }
+
+  // Pass 2: paginate — single-digit alone; >6 children alone on a full page;
+  // all other compact families exactly 2 per page (never 3).
+  type PageSlot = { index: number; sectionHeight: number };
+  const pages: PageSlot[][] = [];
+  let pendingPair: PageSlot[] = [];
+
+  const flushPair = () => {
+    if (pendingPair.length === 0) return;
+    if (pendingPair.length === 1) {
+      // Odd leftover: expand to full page so images use available space.
+      const solo = pendingPair[0];
+      solo.sectionHeight = PAGE_BLOCK_MAX_HEIGHT;
+      pages.push([solo]);
+    } else {
+      pages.push(pendingPair);
+    }
+    pendingPair = [];
+  };
+
+  for (let i = 0; i < records.length; i += 1) {
+    const record = records[i];
+
+    if (isSingleDigitFamilyCode(record.code)) {
+      flushPair();
+      pages.push([{ index: i, sectionHeight: measuredLayouts[i].blockHeight }]);
+      continue;
     }
 
-    cursorY = await drawFamilyBlock(
-      page,
-      record,
-      cursorY,
-      font,
-      boldFont,
-      loadAsset,
-      layout,
-    );
-    cursorY = isSingleDigitCode ? PAGE_BLOCK_BOTTOM : cursorY - BLOCK_GAP;
+    if (isLargeFamily(record)) {
+      flushPair();
+      pages.push([{ index: i, sectionHeight: PAGE_BLOCK_MAX_HEIGHT }]);
+      continue;
+    }
+
+    pendingPair.push({ index: i, sectionHeight: COMPACT_SECTION_HEIGHT });
+    if (pendingPair.length === 2) {
+      pages.push(pendingPair);
+      pendingPair = [];
+    }
+  }
+  flushPair();
+
+  // Re-measure compact layouts with their final section heights.
+  for (const pageSlots of pages) {
+    for (const slot of pageSlots) {
+      const record = records[slot.index];
+      if (isSingleDigitFamilyCode(record.code)) continue;
+      measuredLayouts[slot.index] = measureCompactFamilyBlockLayout(
+        record,
+        font,
+        embeddedPhotosByIndex[slot.index],
+        slot.sectionHeight,
+      );
+    }
+  }
+
+  // Pass 3: draw page by page with equal horizontal sections for paired families.
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    const pageSlots = pages[pageIndex];
+    const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    await drawDecorativeBorder(page);
+
+    const onlySingleDigit = pageSlots.length === 1 && isSingleDigitFamilyCode(records[pageSlots[0].index].code);
+
+    if (onlySingleDigit) {
+      const slot = pageSlots[0];
+      const record = records[slot.index];
+      const layout = measuredLayouts[slot.index];
+      const requiredHeight = layout.blockHeight;
+
+      if (requiredHeight > PAGE_BLOCK_MAX_HEIGHT) {
+        await drawOversizedFamilyBlock(
+          pdfDoc,
+          page,
+          record,
+          PAGE_BLOCK_TOP,
+          font,
+          boldFont,
+          loadAsset,
+          layout,
+        );
+        // Oversized single-digit may add continuation pages; those are already attached.
+        continue;
+      }
+
+      // Always start a single-family page from the top — never vertically center.
+      await drawFamilyBlock(page, record, PAGE_BLOCK_TOP, font, boldFont, loadAsset, layout);
+      continue;
+    }
+
+    let cursorY = PAGE_BLOCK_TOP;
+    for (let slotIndex = 0; slotIndex < pageSlots.length; slotIndex += 1) {
+      const slot = pageSlots[slotIndex];
+      const record = records[slot.index];
+      const layout = measuredLayouts[slot.index];
+
+      await drawFamilyBlock(page, record, cursorY, font, boldFont, loadAsset, layout);
+      cursorY -= layout.blockHeight;
+      if (slotIndex < pageSlots.length - 1) {
+        cursorY -= COMPACT_SECTION_GAP;
+      }
+    }
   }
 
   drawPageNumbers(pdfDoc, font, 1);
