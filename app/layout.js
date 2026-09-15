@@ -2,9 +2,11 @@ import { Playfair_Display, Inter, Cormorant_Garamond } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/context/AuthContext';
 import LenisProvider from '@/context/LenisContext';
+import WelcomeGateProvider from '@/context/WelcomeGateContext';
 import Navbar from '@/components/ui/Navbar';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import ScrollProgress from '@/components/ui/ScrollProgress';
+import EnvelopeGate from '@/components/ui/EnvelopeGate';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -45,10 +47,13 @@ export default function RootLayout({ children }) {
       <body>
         <AuthProvider>
           <LenisProvider>
-            <ScrollProgress />
-            <LoadingScreen />
-            <Navbar />
-            {children}
+            <WelcomeGateProvider>
+              <ScrollProgress />
+              <LoadingScreen />
+              <EnvelopeGate />
+              <Navbar />
+              {children}
+            </WelcomeGateProvider>
           </LenisProvider>
         </AuthProvider>
       </body>

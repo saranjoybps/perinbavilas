@@ -1,10 +1,11 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { FamilyRecord, SortField } from "@/types/family";
 import { formatDate, formatName } from "@/lib/formatters";
 import { getSpouses } from "@/lib/family-utils";
 
-const thStyle = {
+const thStyle: CSSProperties = {
   fontFamily: 'var(--font-inter)',
   fontSize: '0.62rem',
   letterSpacing: '0.24em',

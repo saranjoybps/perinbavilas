@@ -163,6 +163,129 @@
   animation: shimmer 5s linear infinite;
 }
 
+/* ── Welcome envelope ── */
+.envelope-stage {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.35rem;
+  perspective: 1100px;
+}
+
+.envelope-stage:disabled {
+  cursor: default;
+}
+
+.envelope {
+  position: relative;
+  width: min(380px, 86vw);
+  height: 240px;
+  transform-style: preserve-3d;
+}
+
+.envelope-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  position: relative;
+  z-index: 2;
+}
+
+.envelope-letter {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 28%;
+  z-index: 1;
+  height: 120px;
+  background: #FFFBF4;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(26, 16, 8, 0.06);
+}
+
+.envelope-letter-kicker {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(196, 155, 26, 0.8);
+}
+
+.envelope-letter-title {
+  font-family: var(--font-cormorant), serif;
+  font-size: 1.45rem;
+  font-weight: 400;
+  color: #1A1008;
+  letter-spacing: 0.04em;
+}
+
+.envelope-family {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  z-index: 4;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-cormorant), serif;
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  font-style: italic;
+  font-weight: 400;
+  color: #1A1008;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.envelope-flap-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50px;
+  z-index: 5;
+  transform-origin: top center;
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 6px 10px rgba(26, 16, 8, 0.08));
+}
+
+.envelope-flap-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.envelope.is-open .envelope-flap-wrap {
+  transform: rotateX(-168deg);
+}
+
+.envelope-seal {
+  position: absolute;
+  left: 50%;
+  top: 118px;
+  margin-left: -36px;
+  z-index: 6;
+  width: 72px;
+  height: 72px;
+  filter: drop-shadow(0 8px 16px rgba(148, 108, 16, 0.35));
+}
+
+.envelope-cta {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(26, 16, 8, 0.45);
+}
+
 /* ── Gold rule divider ── */
 .gold-rule {
   display: block;

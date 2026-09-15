@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
+import { useWelcomeGate } from '@/context/WelcomeGateContext';
 import { signOutUser } from '@/lib/firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -16,6 +17,7 @@ const NAV = [
 
 export default function Navbar() {
   const { user, isAdmin } = useAuth();
+  const { ready, active: welcomeActive } = useWelcomeGate();
   const router            = useRouter();
   const pathname          = usePathname();
   const isAppRoute        = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard');
@@ -34,7 +36,7 @@ export default function Navbar() {
     router.push('/');
   };
 
-  if (isAppRoute) return null;
+  if (!ready || isAppRoute || welcomeActive) return null;
 
   return (
     <motion.nav

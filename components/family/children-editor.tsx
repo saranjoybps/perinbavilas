@@ -2,6 +2,7 @@
 
 import { Child } from "@/types/family";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { DatePicker } from "./date-picker";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent,
@@ -23,7 +24,7 @@ const inputStyle = {
   boxSizing: 'border-box' as const,
 };
 
-const thStyle = {
+const thStyle: CSSProperties = {
   fontFamily: 'var(--font-inter)',
   fontSize: '0.6rem',
   letterSpacing: '0.2em',
@@ -143,8 +144,8 @@ export function ChildrenEditor({ children, onChange, parentCode }: ChildrenEdito
   return (
     <div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div style={{ overflow: 'hidden', border: '1px solid rgba(212,175,55,0.12)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ overflowX: 'auto', border: '1px solid rgba(212,175,55,0.12)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
                 <th style={thStyle}></th>

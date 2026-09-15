@@ -52,6 +52,7 @@ export default function DashboardLayout({ children }) {
         <Link href="/" style={{ textDecoration: 'none' }} onClick={() => setMobileOpen(false)}>
           <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.3rem', color: '#C49B1A' }}>Perinba Vilas</span>
         </Link>
+        <span className="gold-rule" style={{ width: 40, margin: '10px 0 8px' }} />
         <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.65rem', color: 'rgba(26,16,8,0.35)', letterSpacing: '0.25em', textTransform: 'uppercase', marginTop: '0.2rem' }}>
           Family Portal
         </p>
@@ -120,7 +121,7 @@ export default function DashboardLayout({ children }) {
   );
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen flex" style={{ background: '#FFF8F0' }}>
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3"
         style={{ background: 'rgba(255,251,245,0.98)', borderBottom: '1px solid rgba(212,175,55,0.18)' }}>

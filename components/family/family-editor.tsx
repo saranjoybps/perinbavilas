@@ -95,7 +95,7 @@ const tabStyle = (active: boolean) => ({
   fontSize: '0.72rem',
   letterSpacing: '0.1em',
   textTransform: 'uppercase' as const,
-  padding: '0.65rem 1.5rem',
+  padding: '0.6rem 1rem',
   background: active ? 'rgba(196,155,26,0.08)' : 'transparent',
   color: active ? '#C49B1A' : 'rgba(26,16,8,0.4)',
   border: 'none',
@@ -341,7 +341,7 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
           {isEditing ? `Edit: ${record?.name}` : 'Add New Family'}
         </p>
 
-        <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(212,175,55,0.18)', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0', borderBottom: '1px solid rgba(212,175,55,0.18)', marginBottom: '1.25rem' }}>
           {(['basic', 'spouse', 'children', 'photos'] as const).map((tab) => (
             <button key={tab} style={tabStyle(activeTab === tab)} onClick={() => setActiveTab(tab)}>
               {tab === 'basic' ? 'Basic Info' : tab.charAt(0).toUpperCase() + tab.slice(1)}

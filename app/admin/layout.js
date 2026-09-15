@@ -39,7 +39,7 @@ export default function AdminLayout({ children }) {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF8F0' }}>
       <div style={{ width: 36, height: 36, borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.2)', borderTopColor: '#C49B1A', animation: 'spin 1s linear infinite' }} />
     </div>
   );
@@ -100,7 +100,7 @@ export default function AdminLayout({ children }) {
   );
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen flex" style={{ background: '#FFF8F0' }}>
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3"
         style={{ background: 'rgba(255,251,245,0.98)', borderBottom: '1px solid rgba(212,175,55,0.18)' }}>

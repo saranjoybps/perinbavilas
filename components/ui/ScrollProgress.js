@@ -3,11 +3,13 @@
 import { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useWelcomeGate } from '@/context/WelcomeGateContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function ScrollProgress() {
   const barRef = useRef(null);
+  const { active: welcomeActive } = useWelcomeGate();
 
   useEffect(() => {
     const trigger = ScrollTrigger.create({
@@ -25,6 +27,8 @@ export default function ScrollProgress() {
 
     return () => trigger.kill();
   }, []);
+
+  if (welcomeActive) return null;
 
   return (
     <div

@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { FamilyRecord } from "@/types/family";
 import { formatDate, formatName } from "@/lib/formatters";
 import { getSpouses } from "@/lib/family-utils";
@@ -16,7 +17,7 @@ const inputStyle = {
   boxSizing: 'border-box' as const,
 };
 
-const thStyle = {
+const thStyle: CSSProperties = {
   fontFamily: 'var(--font-inter)',
   fontSize: '0.6rem',
   letterSpacing: '0.2em',

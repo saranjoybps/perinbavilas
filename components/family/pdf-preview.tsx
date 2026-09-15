@@ -93,9 +93,9 @@ export function PdfPreview({ records, children }: PdfPreviewProps) {
           <div className="glass-warm shadow-cloud"
             style={{ width: '95vw', maxWidth: '72rem', height: '90vh', margin: '5vh auto', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderTop: '2px solid rgba(196,155,26,0.4)' }}
             onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(212,175,55,0.15)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem 1rem', padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(212,175,55,0.15)' }}>
               <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '1rem', fontWeight: 400, color: '#1A1008' }}>PDF Preview — Family Directory</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' }}>
                 <button style={btnBase} onClick={() => setZoom(Math.max(50, zoom - 25))}>−</button>
                 <span style={{ fontFamily: 'var(--font-inter)', fontSize: '0.72rem', color: 'rgba(26,16,8,0.45)', minWidth: '2.5rem', textAlign: 'center' }}>{zoom}%</span>
                 <button style={btnBase} onClick={() => setZoom(Math.min(200, zoom + 25))}>+</button>

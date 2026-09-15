@@ -1,19 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloudLayer from '@/components/clouds/CloudLayer';
+import { useWelcomeGate } from '@/context/WelcomeGateContext';
 
 export default function LoadingScreen() {
+  const { ready, active: welcomeActive } = useWelcomeGate();
+  const skipAfterWelcome = useRef(false);
   const [visible, setVisible] = useState(true);
   const [phase,   setPhase]   = useState('init'); // init | reveal | done
 
   useEffect(() => {
+    if (!ready) {
+      setVisible(false);
+      return;
+    }
+    if (welcomeActive) {
+      skipAfterWelcome.current = true;
+      setVisible(false);
+      return;
+    }
+    if (skipAfterWelcome.current) {
+      setVisible(false);
+      return;
+    }
+    setVisible(true);
+    setPhase('init');
     const t1 = setTimeout(() => setPhase('reveal'), 500);
     const t2 = setTimeout(() => setPhase('done'),  2600);
     const t3 = setTimeout(() => setVisible(false), 3200);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
+  }, [ready, welcomeActive]);
 
   return (
     <AnimatePresence>

@@ -92,8 +92,8 @@ export default function HeroSection() {
     <section
       ref={sectionRef}
       id="hero"
-      className="relative w-full overflow-hidden"
-      style={{ height: '100svh', minHeight: 680 }}
+      className="relative w-full overflow-hidden min-h-[560px] md:min-h-[680px]"
+      style={{ height: '100svh' }}
     >
       {/* ── Sky gradient background ── */}
       <div className="absolute inset-0 sky-gradient" />
@@ -212,7 +212,7 @@ export default function HeroSection() {
 
       {/* ── Floating dust particles ── */}
       <div className="absolute inset-0" style={{ zIndex: 5 }}>
-        <FloatingParticles count={22} />
+        <FloatingParticles count={8} />
       </div>
 
       {/* ── Bottom fade-out gradient ── */}
@@ -220,7 +220,7 @@ export default function HeroSection() {
         className="absolute bottom-0 left-0 right-0 pointer-events-none"
         style={{
           height: '30%',
-          background: 'linear-gradient(to bottom, transparent, rgba(248,250,252,0.94))',
+          background: 'linear-gradient(to bottom, transparent, rgba(244,247,250,0.96))',
           zIndex: 5,
         }}
         aria-hidden="true"

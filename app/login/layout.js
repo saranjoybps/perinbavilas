@@ -7,9 +7,8 @@ export default function LoginLayout({ children }) {
       style={{ background: 'linear-gradient(180deg, #B8DFF8 0%, #D8F0FB 30%, #F4FAFE 60%, #FFF7ED 100%)' }}
     >
       {/* Cloud bg */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+      <div className="absolute inset-0 pointer-events-none opacity-70" aria-hidden="true">
         <CloudLayer depth="far" />
-        <CloudLayer depth="mid" />
       </div>
 
       {/* Sunlight glow */}

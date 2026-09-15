@@ -50,10 +50,9 @@ function TimelineItem({ m, index }) {
       {/* Content card — even items right-align within their flex-1 to sit near centre line */}
       <div className={`timeline-card flex-1 ${isEven ? 'md:flex md:justify-end' : ''}`}>
         <div
-          className="glass-warm shadow-cloud p-8 sm:p-10 max-w-md w-full mx-auto md:mx-0"
+          className="glass-warm shadow-cloud p-7 sm:p-9 max-w-md w-full mx-auto md:mx-0"
           style={{
-            borderLeft:  isEven  ? '3px solid rgba(212,175,55,0.5)' : 'none',
-            borderRight: !isEven ? '3px solid rgba(212,175,55,0.5)' : 'none',
+            borderLeft: '3px solid rgba(212,175,55,0.5)',
             borderTop: '1px solid rgba(255,255,255,0.7)',
           }}
         >
@@ -72,20 +71,19 @@ function TimelineItem({ m, index }) {
           </span>
           <h3
             style={{
-              fontFamily: 'var(--font-playfair)',
-              fontSize: '1.4rem',
-              fontWeight: 600,
+              fontFamily: 'var(--font-cormorant)',
+              fontSize: '1.5rem',
+              fontWeight: 500,
               color: '#1A1008',
               marginBottom: '0.75rem',
             }}
           >
             {m.label}
           </h3>
-          <span className="gold-rule block mb-4" style={{ marginLeft: 0 }} />
           <p
             style={{
               fontFamily: 'var(--font-inter)',
-              fontSize: '0.875rem',
+              fontSize: '0.95rem',
               lineHeight: 1.8,
               color: 'rgba(26,16,8,0.58)',
             }}
@@ -146,16 +144,16 @@ export default function TimelineSection() {
     });
 
     // Each item: alternating slide-in cards + node pop
-    sectionRef.current.querySelectorAll('.timeline-item').forEach((item, i) => {
+    sectionRef.current.querySelectorAll('.timeline-item').forEach((item) => {
       const card = item.querySelector('.timeline-card');
       const node = item.querySelector('.timeline-node');
 
       gsap.from(card, {
-        scrollTrigger: { trigger: item, start: 'top 82%' },
-        x:               i % 2 === 0 ? -70 : 70,
+        scrollTrigger: { trigger: item, start: 'top 86%' },
+        y:               24,
         opacity:         0,
-        duration:        1.1,
-        ease:            'power3.out',
+        duration:        0.85,
+        ease:            'power2.out',
         immediateRender: false,
       });
 
@@ -178,9 +176,9 @@ export default function TimelineSection() {
       id="timeline"
       className="relative overflow-hidden"
       style={{
-        background:    'linear-gradient(180deg, #F0F9FF 0%, #FFF7ED 60%, #FFFBF7 100%)',
-        paddingTop:    '7rem',
-        paddingBottom: '8rem',
+        background:    '#FFF8F0',
+        paddingTop:    '6.5rem',
+        paddingBottom: '7rem',
       }}
     >
       {/* Vertical timeline line — desktop only, drawn via GSAP scrub */}
@@ -196,22 +194,20 @@ export default function TimelineSection() {
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-12" style={{ zIndex: 1 }}>
         {/* Header */}
-        <div className="timeline-header text-center mb-20">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <span className="gold-rule" />
+        <div className="timeline-header text-center mb-16">
+          <div className="flex items-center justify-center gap-4 mb-5">
             <span
               className="text-xs tracking-[0.4em] uppercase"
               style={{ fontFamily: 'var(--font-inter)', color: '#C49B1A' }}
             >
               Through Time
             </span>
-            <span className="gold-rule" />
           </div>
 
           <h2
             style={{
               fontFamily: 'var(--font-cormorant)',
-              fontSize: 'clamp(2.4rem, 5vw, 4rem)',
+              fontSize: 'clamp(2.1rem, 4.5vw, 3.4rem)',
               fontWeight: 400,
               color: '#1A1008',
             }}
@@ -222,7 +218,7 @@ export default function TimelineSection() {
         </div>
 
         {/* Timeline items */}
-        <div className="flex flex-col gap-16">
+        <div className="flex flex-col gap-10 md:gap-16">
           {MILESTONES.map((m, i) => (
             <TimelineItem key={m.year} m={m} index={i} />
           ))}

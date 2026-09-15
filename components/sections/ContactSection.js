@@ -30,8 +30,8 @@ export default function ContactSection() {
     gsap.from(rightRef.current, {
       scrollTrigger: { trigger: rightRef.current, start: 'top 78%' },
       opacity: 0,
-      x:       40,
-      duration: 1.1,
+      y:       24,
+      duration: 0.9,
       ease:    'power3.out',
       immediateRender: false,
     });
@@ -71,9 +71,9 @@ export default function ContactSection() {
       id="contact"
       className="relative overflow-hidden"
       style={{
-        background: 'linear-gradient(180deg, #F0F9FF 0%, #EBF7FD 40%, #F8FAFC 100%)',
-        paddingTop: '7rem',
-        paddingBottom: '8rem',
+        background: '#F4F7FA',
+        paddingTop: '6.5rem',
+        paddingBottom: '7rem',
       }}
     >
       {/* Soft glow */}
@@ -123,8 +123,8 @@ export default function ContactSection() {
             <p
               style={{
                 fontFamily: 'var(--font-inter)',
-                fontSize: '0.9rem',
-                color: 'rgba(26,16,8,0.55)',
+                fontSize: '1.05rem',
+                color: 'rgba(26,16,8,0.52)',
                 lineHeight: 1.8,
                 marginBottom: '2.5rem',
               }}
@@ -204,8 +204,8 @@ export default function ContactSection() {
                   </div>
                   <p
                     style={{
-                      fontFamily: 'var(--font-playfair)',
-                      fontSize: '1.3rem',
+                      fontFamily: 'var(--font-cormorant)',
+                      fontSize: '1.45rem',
                       color: '#1A1008',
                       marginBottom: '0.5rem',
                     }}

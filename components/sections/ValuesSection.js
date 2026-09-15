@@ -4,8 +4,6 @@ import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import CloudLayer from '@/components/clouds/CloudLayer';
-
 gsap.registerPlugin(ScrollTrigger);
 
 const VALUES = [
@@ -61,16 +59,13 @@ export default function ValuesSection() {
     });
 
     // Each card gets its own ScrollTrigger — true one-by-one cascade
-    sectionRef.current.querySelectorAll('.value-cascade-card').forEach((card, i) => {
-      const fromLeft = i % 2 === 0;
+    sectionRef.current.querySelectorAll('.value-cascade-card').forEach((card) => {
       gsap.from(card, {
-        scrollTrigger: { trigger: card, start: 'top 85%' },
-        x:               fromLeft ? -90 : 90,
+        scrollTrigger: { trigger: card, start: 'top 88%' },
+        y:               28,
         opacity:         0,
-        scale:           0.93,
-        filter:          'blur(6px)',
-        duration:        1.0,
-        ease:            'power3.out',
+        duration:        0.85,
+        ease:            'power2.out',
         immediateRender: false,
       });
       const bar = card.querySelector('.value-accent-bar');
@@ -93,31 +88,25 @@ export default function ValuesSection() {
       ref={sectionRef}
       id="values"
       className="relative overflow-hidden"
-      style={{ background: '#F8FAFC', paddingTop: '7rem', paddingBottom: '8rem' }}
+      style={{ background: '#F4F7FA', paddingTop: '6.5rem', paddingBottom: '7rem' }}
     >
-      {/* Soft cloud wisps in background */}
-      <div className="absolute inset-0 opacity-40 pointer-events-none" aria-hidden="true">
-        <CloudLayer depth="far" />
-      </div>
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-12" style={{ zIndex: 1 }}>
         {/* Section header */}
-        <div className="values-header text-center mb-20">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <span className="gold-rule" />
+        <div className="values-header text-center mb-16">
+          <div className="flex items-center justify-center gap-4 mb-5">
             <span
               className="text-xs tracking-[0.4em] uppercase"
               style={{ fontFamily: 'var(--font-inter)', color: '#C49B1A' }}
             >
               What We Stand For
             </span>
-            <span className="gold-rule" />
           </div>
 
           <h2
             style={{
               fontFamily: 'var(--font-cormorant)',
-              fontSize: 'clamp(2.4rem, 5vw, 4rem)',
+              fontSize: 'clamp(2.1rem, 4.5vw, 3.4rem)',
               fontWeight: 400,
               color: '#1A1008',
               lineHeight: 1.18,
@@ -130,9 +119,9 @@ export default function ValuesSection() {
           <p
             style={{
               fontFamily: 'var(--font-inter)',
-              fontSize: '1rem',
-              color: 'rgba(26,16,8,0.5)',
-              maxWidth: 460,
+              fontSize: '1.05rem',
+              color: 'rgba(26,16,8,0.52)',
+              maxWidth: 440,
               lineHeight: 1.75,
               margin: '1.25rem auto 0',
             }}
@@ -201,8 +190,8 @@ export default function ValuesSection() {
                   </span>
                   <h3
                     style={{
-                      fontFamily: 'var(--font-playfair)',
-                      fontSize:   'clamp(1.25rem, 2.2vw, 1.65rem)',
+                      fontFamily: 'var(--font-cormorant)',
+                      fontSize:   'clamp(1.35rem, 2.2vw, 1.75rem)',
                       fontWeight: 600,
                       color:      '#1A1008',
                       lineHeight: 1.2,

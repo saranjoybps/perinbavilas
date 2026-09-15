@@ -62,11 +62,8 @@ export default function LegacyStatement() {
       }}
     >
       {/* Cloud layers behind text */}
-      <div className="absolute inset-0 pointer-events-none opacity-50" aria-hidden="true">
+      <div className="absolute inset-0 pointer-events-none opacity-28" aria-hidden="true">
         <CloudLayer depth="far" />
-      </div>
-      <div className="absolute inset-0 pointer-events-none opacity-30" aria-hidden="true">
-        <CloudLayer depth="mid" />
       </div>
 
       {/* Sunlight glow */}
@@ -105,7 +102,7 @@ export default function LegacyStatement() {
         <blockquote
           style={{
             fontFamily:   'var(--font-cormorant)',
-            fontSize:     'clamp(1.7rem, 4vw, 3rem)',
+            fontSize:     'clamp(1.35rem, 4vw, 3rem)',
             fontWeight:   300,
             fontStyle:    'italic',
             color:        '#1A1008',
