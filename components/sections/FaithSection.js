@@ -35,14 +35,22 @@ export default function FaithSection() {
   }, []);
 
   useGSAP(() => {
-    gsap.from(contentRef.current, {
-      scrollTrigger: { trigger: sectionRef.current, start: 'top 70%' },
-      opacity: 0,
-      y: 28,
-      duration: 1.1,
-      ease: 'power3.out',
-      immediateRender: false,
-    });
+    gsap.fromTo(
+      contentRef.current,
+      { opacity: 0, y: 20 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 72%',
+          toggleActions: 'play none none none',
+          once: true,
+        },
+      },
+    );
   }, { scope: sectionRef });
 
   return (

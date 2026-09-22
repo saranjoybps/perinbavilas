@@ -68,14 +68,22 @@ export default function GallerySection() {
   const headRef    = useRef(null);
 
   useGSAP(() => {
-    gsap.from(headRef.current, {
-      scrollTrigger: { trigger: headRef.current, start: 'top 82%' },
-      opacity: 0,
-      y: 28,
-      duration: 0.9,
-      ease: 'power2.out',
-      immediateRender: false,
-    });
+    gsap.fromTo(
+      headRef.current,
+      { opacity: 0, y: 24 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.95,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: headRef.current,
+          start: 'top 85%',
+          toggleActions: 'play none none none',
+          once: true,
+        },
+      },
+    );
 
     ScrollTrigger.batch(
       sectionRef.current.querySelectorAll('.gallery-card'),
@@ -83,13 +91,12 @@ export default function GallerySection() {
         start: 'top 90%',
         onEnter: (batch) =>
           gsap.to(batch, {
-            opacity:  1,
-            y:        0,
-            scale:    1,
-            stagger:  { each: 0.08 },
-            duration: 0.85,
-            ease:     'power2.out',
-            overwrite: true,
+            opacity: 1,
+            y: 0,
+            stagger: { each: 0.07 },
+            duration: 0.9,
+            ease: 'power2.out',
+            overwrite: 'auto',
           }),
         once: true,
       },

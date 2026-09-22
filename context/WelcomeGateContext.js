@@ -26,15 +26,27 @@ export default function WelcomeGateProvider({ children }) {
       return;
     }
 
+    const force = new URLSearchParams(window.location.search).get('welcome') === '1';
+    if (force) {
+      dismissedRef.current = false;
+      try {
+        window.localStorage.removeItem(WELCOME_STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+      setActive(true);
+      setReady(true);
+      return;
+    }
+
     if (dismissedRef.current) {
       setActive(false);
       setReady(true);
       return;
     }
 
-    const force = new URLSearchParams(window.location.search).get('welcome') === '1';
     const opened = window.localStorage.getItem(WELCOME_STORAGE_KEY) === '1';
-    setActive(force || !opened);
+    setActive(!opened);
     setReady(true);
   }, [pathname]);
 

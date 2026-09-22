@@ -49,35 +49,59 @@ export default function ValuesSection() {
   const sectionRef = useRef(null);
 
   useGSAP(() => {
-    gsap.from('.values-header', {
-      scrollTrigger: { trigger: '.values-header', start: 'top 82%' },
-      opacity: 0,
-      y: 44,
-      duration: 1.1,
-      ease: 'power3.out',
-      immediateRender: false,
-    });
+    gsap.fromTo(
+      '.values-header',
+      { opacity: 0, y: 28 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: '.values-header',
+          start: 'top 85%',
+          toggleActions: 'play none none none',
+          once: true,
+        },
+      },
+    );
 
     sectionRef.current.querySelectorAll('.value-cascade-card').forEach((card) => {
-      gsap.from(card, {
-        scrollTrigger: { trigger: card, start: 'top 88%' },
-        y: 28,
-        opacity: 0,
-        duration: 0.85,
-        ease: 'power2.out',
-        immediateRender: false,
-      });
+      gsap.fromTo(
+        card,
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.9,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: card,
+            start: 'top 90%',
+            toggleActions: 'play none none none',
+            once: true,
+          },
+        },
+      );
       const bar = card.querySelector('.value-accent-bar');
       if (bar) {
-        gsap.from(bar, {
-          scrollTrigger: { trigger: card, start: 'top 85%' },
-          scaleY: 0,
-          transformOrigin: 'top center',
-          duration: 0.9,
-          delay: 0.28,
-          ease: 'expo.out',
-          immediateRender: false,
-        });
+        gsap.fromTo(
+          bar,
+          { scaleY: 0 },
+          {
+            scaleY: 1,
+            transformOrigin: 'top center',
+            duration: 0.85,
+            delay: 0.15,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 88%',
+              toggleActions: 'play none none none',
+              once: true,
+            },
+          },
+        );
       }
     });
   }, { scope: sectionRef });

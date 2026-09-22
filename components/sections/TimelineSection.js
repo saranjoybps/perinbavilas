@@ -120,53 +120,78 @@ export default function TimelineSection() {
   const lineRef    = useRef(null);
 
   useGSAP(() => {
-    // Vertical line draw — scrubbed to section scroll progress
-    gsap.from(lineRef.current, {
-      scrollTrigger: {
-        trigger: sectionRef.current,
-        start:   'top 55%',
-        end:     'bottom 85%',
-        scrub:   1.2,
+    gsap.fromTo(
+      lineRef.current,
+      { scaleY: 0 },
+      {
+        scaleY: 1,
+        transformOrigin: 'top center',
+        ease: 'none',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 55%',
+          end: 'bottom 85%',
+          scrub: 1,
+        },
       },
-      scaleY:          0,
-      transformOrigin: 'top center',
-      ease:            'none',
-      immediateRender: false,
-    });
+    );
 
-    // Header fade-up
-    gsap.from('.timeline-header', {
-      scrollTrigger: { trigger: '.timeline-header', start: 'top 82%' },
-      opacity: 0,
-      y: 40,
-      duration: 1.1,
-      ease: 'power3.out',
-      immediateRender: false,
-    });
+    gsap.fromTo(
+      '.timeline-header',
+      { opacity: 0, y: 28 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: '.timeline-header',
+          start: 'top 85%',
+          toggleActions: 'play none none none',
+          once: true,
+        },
+      },
+    );
 
-    // Each item: alternating slide-in cards + node pop
     sectionRef.current.querySelectorAll('.timeline-item').forEach((item) => {
       const card = item.querySelector('.timeline-card');
       const node = item.querySelector('.timeline-node');
 
-      gsap.from(card, {
-        scrollTrigger: { trigger: item, start: 'top 86%' },
-        y:               24,
-        opacity:         0,
-        duration:        0.85,
-        ease:            'power2.out',
-        immediateRender: false,
-      });
+      gsap.fromTo(
+        card,
+        { opacity: 0, y: 22 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.9,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: item,
+            start: 'top 88%',
+            toggleActions: 'play none none none',
+            once: true,
+          },
+        },
+      );
 
       if (node) {
-        gsap.from(node, {
-          scrollTrigger:   { trigger: item, start: 'top 80%' },
-          scale:           0,
-          duration:        0.7,
-          delay:           0.15,
-          ease:            'back.out(2.5)',
-          immediateRender: false,
-        });
+        gsap.fromTo(
+          node,
+          { opacity: 0, scale: 0.7 },
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 0.7,
+            delay: 0.12,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: item,
+              start: 'top 85%',
+              toggleActions: 'play none none none',
+              once: true,
+            },
+          },
+        );
       }
     });
   }, { scope: sectionRef });

@@ -18,24 +18,40 @@ export default function ContactSection() {
   const [status, setStatus] = useState('idle');
 
   useGSAP(() => {
-    gsap.from(Array.from(leftRef.current.children), {
-      scrollTrigger: { trigger: leftRef.current, start: 'top 80%' },
-      opacity: 0,
-      y:       40,
-      stagger: 0.12,
-      duration: 1.0,
-      ease:    'power3.out',
-      immediateRender: false,
-    });
+    gsap.fromTo(
+      Array.from(leftRef.current.children),
+      { opacity: 0, y: 24 },
+      {
+        opacity: 1,
+        y: 0,
+        stagger: 0.1,
+        duration: 0.95,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: leftRef.current,
+          start: 'top 82%',
+          toggleActions: 'play none none none',
+          once: true,
+        },
+      },
+    );
 
-    gsap.from(rightRef.current, {
-      scrollTrigger: { trigger: rightRef.current, start: 'top 78%' },
-      opacity: 0,
-      y:       24,
-      duration: 0.9,
-      ease:    'power3.out',
-      immediateRender: false,
-    });
+    gsap.fromTo(
+      rightRef.current,
+      { opacity: 0, y: 20 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.95,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: rightRef.current,
+          start: 'top 82%',
+          toggleActions: 'play none none none',
+          once: true,
+        },
+      },
+    );
   }, { scope: sectionRef });
 
   const handleSubmit = async (e) => {

@@ -1,191 +1,206 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import CloudLayer from '@/components/clouds/CloudLayer';
 import { useWelcomeGate } from '@/context/WelcomeGateContext';
 
-function EnvelopeArt({ opening }) {
+const VERSE =
+  'For I know the plans I have for you, declares the Lord — plans to give you a hope and a future.';
+const REFERENCE = 'Jeremiah 29:11';
+
+function Typewriter({ text, start, onDone, className }) {
+  const [shown, setShown] = useState('');
+  const [finished, setFinished] = useState(false);
+
+  useEffect(() => {
+    if (!start || finished) return undefined;
+    setShown('');
+    let i = 0;
+    const id = window.setInterval(() => {
+      i += 1;
+      setShown(text.slice(0, i));
+      if (i >= text.length) {
+        window.clearInterval(id);
+        setFinished(true);
+        onDone?.();
+      }
+    }, 28);
+    return () => window.clearInterval(id);
+  }, [start, text, finished, onDone]);
+
+  const display = finished ? text : shown;
+
   return (
-    <div className={`envelope ${opening ? 'is-open' : ''}`}>
-      <motion.div
-        className="envelope-letter"
-        animate={opening ? { y: -78, opacity: 1 } : { y: 10, opacity: 0 }}
-        transition={{ duration: 0.65, delay: opening ? 0.22 : 0, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <span className="gold-rule" style={{ width: 36, margin: '0 auto 8px' }} />
-        <p className="envelope-letter-kicker">Welcome home</p>
-        <p className="envelope-letter-title">Perinba Vilas</p>
-      </motion.div>
-
-      <svg
-        className="envelope-svg"
-        viewBox="0 0 380 240"
-        width="380"
-        height="240"
-        aria-hidden="true"
-      >
-        <defs>
-          <linearGradient id="envPaper" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFF8EE" />
-            <stop offset="100%" stopColor="#EED9B4" />
-          </linearGradient>
-          <linearGradient id="envPocket" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F7E8CC" />
-            <stop offset="100%" stopColor="#E6C994" />
-          </linearGradient>
-          <linearGradient id="envFlap" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFDF8" />
-            <stop offset="100%" stopColor="#E8D0A4" />
-          </linearGradient>
-          <filter id="envShadow" x="-12%" y="-12%" width="124%" height="130%">
-            <feDropShadow dx="0" dy="14" stdDeviation="14" floodColor="#1A1008" floodOpacity="0.16" />
-          </filter>
-        </defs>
-
-        <rect x="8" y="58" width="364" height="174" rx="6" fill="url(#envPaper)" filter="url(#envShadow)" />
-        <path d="M8 70 L190 168 L372 70 L372 232 Q372 232 366 232 L14 232 Q8 232 8 232 Z" fill="url(#envPocket)" />
-        <path d="M8 70 L190 168 L372 70" fill="none" stroke="rgba(15, 42, 31,0.28)" strokeWidth="1.2" />
-      </svg>
-
-      <div className="envelope-flap-wrap">
-        <svg viewBox="0 0 380 130" width="380" height="130" aria-hidden="true">
-          <defs>
-            <linearGradient id="envFlap" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#FFFDF8" />
-              <stop offset="100%" stopColor="#E8D0A4" />
-            </linearGradient>
-          </defs>
-          <path d="M8 8 L372 8 L190 122 Z" fill="url(#envFlap)" stroke="rgba(15, 42, 31,0.22)" strokeWidth="1" />
-        </svg>
-      </div>
-
-      <p className="envelope-family">The Perinba Family</p>
-
-      <motion.div
-        className="envelope-seal"
-        animate={opening ? { scale: 0.35, opacity: 0, y: 16 } : { scale: 1, opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        aria-hidden="true"
-      >
-        <svg viewBox="0 0 72 72" width="72" height="72">
-          <defs>
-            <radialGradient id="sealGold" cx="38%" cy="32%" r="70%">
-              <stop offset="0%" stopColor="#C5D9CE" />
-              <stop offset="45%" stopColor="#1A3D2E" />
-              <stop offset="100%" stopColor="#0A1C14" />
-            </radialGradient>
-          </defs>
-          <circle cx="36" cy="36" r="34" fill="url(#sealGold)" />
-          <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(255,248,220,0.5)" strokeWidth="1.2" />
-          <text
-            x="36"
-            y="43"
-            textAnchor="middle"
-            fill="#FFFFFF"
-            style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: 20, fontWeight: 500 }}
-          >
-            PV
-          </text>
-        </svg>
-      </motion.div>
-    </div>
-  );
-}
-
-function Envelope({ opening, onOpen }) {
-  return (
-    <motion.button
-      type="button"
-      onClick={onOpen}
-      disabled={opening}
-      aria-label="Open invitation"
-      initial={{ opacity: 0, y: 28, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 1, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={opening ? undefined : { y: -8, scale: 1.02 }}
-      whileTap={opening ? undefined : { scale: 0.99 }}
-      className="envelope-stage"
-    >
-      <EnvelopeArt opening={opening} />
-      <span className="envelope-cta">Click to open</span>
-    </motion.button>
+    <p className={className} aria-live="polite">
+      {display}
+      {start && !finished && <span className="promise-caret" aria-hidden="true" />}
+    </p>
   );
 }
 
 export default function EnvelopeGate() {
   const pathname = usePathname();
   const { ready, active, complete } = useWelcomeGate();
-  const [opening, setOpening] = useState(false);
-
-  const handleOpen = () => {
-    if (opening) return;
-    setOpening(true);
-    window.setTimeout(complete, 1450);
-  };
+  // boot → typing → invite (ask click) → sealed (seal shows) → opening (go home)
+  const [phase, setPhase] = useState('boot');
+  const [typingKey, setTypingKey] = useState(0);
 
   const booting = pathname === '/' && !ready;
   const visible = booting || (ready && active);
+  const showCopy = phase === 'typing' || phase === 'invite' || phase === 'sealed' || phase === 'opening';
+  const showRef = phase === 'invite' || phase === 'sealed' || phase === 'opening';
+
+  useEffect(() => {
+    if (!ready || !active || booting) return undefined;
+    setPhase('typing');
+    setTypingKey((k) => k + 1);
+  }, [ready, active, booting]);
+
+  const handleVerseDone = useCallback(() => {
+    window.setTimeout(() => setPhase('invite'), 500);
+  }, []);
+
+  const handleClickPromise = () => {
+    if (phase !== 'invite') return;
+    setPhase('sealed');
+  };
+
+  useEffect(() => {
+    if (phase !== 'sealed') return undefined;
+    const goHome = window.setTimeout(() => {
+      setPhase('opening');
+      window.setTimeout(complete, 900);
+    }, 2800);
+    return () => window.clearTimeout(goHome);
+  }, [phase, complete]);
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          key="envelope-gate"
-          className="fixed inset-0 z-[180] flex flex-col items-center justify-center overflow-hidden"
+          key="promise-gate"
+          className="promise-gate"
           initial={{ opacity: 1 }}
+          animate={
+            phase === 'opening'
+              ? { opacity: 0, filter: 'blur(8px)', scale: 1.02 }
+              : { opacity: 1, filter: 'blur(0px)', scale: 1 }
+          }
           exit={{ opacity: 0, filter: 'blur(8px)' }}
-          transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
           role="dialog"
           aria-modal="true"
-          aria-label="Family welcome"
+          aria-label="Family promise"
         >
-          <div className="absolute inset-0 sky-gradient" />
+          <div className="promise-gate-bg" aria-hidden="true" />
+          <div className="promise-gate-glow promise-gate-glow--tl" aria-hidden="true" />
+          <div className="promise-gate-glow promise-gate-glow--br" aria-hidden="true" />
 
-          <div className="absolute inset-0 pointer-events-none opacity-55" aria-hidden="true">
-            <motion.div
-              animate={opening ? { y: '-18%', opacity: 0.3 } : { y: 0, opacity: 1 }}
-              transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0"
-            >
-              <CloudLayer depth="far" />
-            </motion.div>
-          </div>
-
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              top: '6%',
-              right: '12%',
-              width: 420,
-              height: 420,
-              background: 'radial-gradient(ellipse 65% 55% at 55% 40%, rgba(168, 196, 180,0.28) 0%, transparent 68%)',
-              filter: 'blur(28px)',
-              animation: 'sunPulse 8s ease-in-out infinite',
-            }}
+          {/* Decorative florals — same bouquet both corners */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/decorative-2.png"
+            alt=""
             aria-hidden="true"
+            className="promise-decor promise-decor--tr"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/decorative-2.png"
+            alt=""
+            aria-hidden="true"
+            className="promise-decor promise-decor--bl"
           />
 
           {!booting && (
-            <div className="relative z-10 flex flex-col items-center px-6">
-              <motion.p
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.1 }}
-                style={{
-                  fontFamily: 'var(--font-inter)',
-                  fontSize: '0.65rem',
-                  letterSpacing: '0.46em',
-                  textTransform: 'uppercase',
-                  color: '#0F2A1F',
-                  marginBottom: '1.75rem',
-                }}
-              >
-                Est. Generations Past
-              </motion.p>
+            <div className="promise-stage">
+              <div className="promise-paper">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/paper-sm.png?v=2"
+                  alt=""
+                  className="promise-paper-img promise-paper-img--sm"
+                  draggable={false}
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/paper-md-lg.png?v=2"
+                  alt=""
+                  className="promise-paper-img promise-paper-img--lg"
+                  draggable={false}
+                />
 
-              <Envelope opening={opening} onOpen={handleOpen} />
+                <div className="promise-panel">
+                  <div className="promise-copy">
+                    <p className="promise-kicker">A promise for our family</p>
+
+                    <Typewriter
+                      key={typingKey}
+                      text={VERSE}
+                      start={showCopy}
+                      onDone={handleVerseDone}
+                      className="promise-verse"
+                    />
+
+                    <AnimatePresence>
+                      {showRef && (
+                        <motion.p
+                          className="promise-ref"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          — {REFERENCE}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <div className="promise-action">
+                    <AnimatePresence mode="wait">
+                      {phase === 'invite' && (
+                        <motion.button
+                          key="invite-cta"
+                          type="button"
+                          className="promise-click-btn"
+                          onClick={handleClickPromise}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.4 }}
+                        >
+                          Click to receive the promise
+                        </motion.button>
+                      )}
+
+                      {(phase === 'sealed' || phase === 'opening') && (
+                        <motion.div
+                          key="seal-reveal"
+                          className="promise-seal-wrap"
+                          initial={{ opacity: 0, scale: 0.7, y: 12 }}
+                          animate={
+                            phase === 'opening'
+                              ? { opacity: 0, scale: 1.12, y: -8 }
+                              : { opacity: 1, scale: 1, y: 0 }
+                          }
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="/seal_image.png"
+                            alt=""
+                            className="promise-seal-img"
+                            draggable={false}
+                          />
+                          <span className="promise-seal-label">Promise sealed</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </motion.div>

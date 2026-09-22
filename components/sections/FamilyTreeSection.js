@@ -4,19 +4,18 @@ export default function FamilyTreeSection() {
   return (
     <section
       id="family-tree"
-      className="relative hidden overflow-hidden lg:block"
+      className="relative block overflow-hidden bg-white md:hidden"
       style={{
-        background: '#FFFFFF',
-        paddingTop: 'clamp(3.5rem, 7vw, 5.5rem)',
-        paddingBottom: 'clamp(3.5rem, 7vw, 5.5rem)',
+        paddingTop: 'clamp(2.5rem, 8vw, 4rem)',
+        paddingBottom: 'clamp(2.5rem, 8vw, 4rem)',
       }}
     >
-      <div className="mx-auto max-w-6xl px-8 xl:px-12">
+      <div className="mx-auto max-w-lg px-4 sm:px-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/family-tree/lg_screen.png"
+          src="/family-tree/family-tree.png"
           alt="Perinba Vilas family tree"
-          className="mx-auto h-auto w-full max-w-5xl object-contain"
+          className="mx-auto h-auto w-full object-contain"
         />
       </div>
     </section>

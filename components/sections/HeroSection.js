@@ -15,11 +15,11 @@ const HERO_POSTER =
   'https://res.cloudinary.com/bsaqrrl4/video/upload/so_2,w_1600,q_auto,f_jpg/v1790068368/11904662_1280_720_60fps_nhnbbv.jpg';
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 28 },
+  hidden: { opacity: 0, y: 20 },
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 1.05, delay: 0.2 + i * 0.18, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 1.15, delay: 0.15 + i * 0.14, ease: [0.25, 0.1, 0.25, 1] },
   }),
 };
 
@@ -49,14 +49,14 @@ export default function HeroSection() {
     const mm = gsap.matchMedia();
     mm.add('(min-width: 768px)', () => {
       gsap.to(contentRef.current, {
-        y: '10%',
-        opacity: 0.35,
+        y: '6%',
+        opacity: 0.55,
         ease: 'none',
         scrollTrigger: {
           trigger: sectionRef.current,
           start: 'top top',
           end: 'bottom top',
-          scrub: 1.2,
+          scrub: true,
         },
       });
     });
