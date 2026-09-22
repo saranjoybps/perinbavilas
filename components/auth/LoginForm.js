@@ -53,7 +53,7 @@ export default function LoginForm() {
               style={{
                 width: '100%',
                 background: 'rgba(255,255,255,0.58)',
-                border: '1px solid rgba(212,175,55,0.22)',
+                border: '1px solid rgba(26, 61, 46,0.22)',
                 padding: '0.8rem 1rem',
                 fontFamily: 'var(--font-inter)',
                 fontSize: '0.875rem',
@@ -61,8 +61,8 @@ export default function LoginForm() {
                 outline: 'none',
                 transition: 'border-color 0.2s',
               }}
-              onFocus={(e)  => (e.target.style.borderColor = '#C49B1A')}
-              onBlur={(e)   => (e.target.style.borderColor = 'rgba(212,175,55,0.22)')}
+              onFocus={(e)  => (e.target.style.borderColor = '#0F2A1F')}
+              onBlur={(e)   => (e.target.style.borderColor = 'rgba(26, 61, 46,0.22)')}
             />
           </div>
         ))}
@@ -70,7 +70,7 @@ export default function LoginForm() {
         <div className="flex justify-end">
           <Link
             href="/login/forgot-password"
-            style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(196,155,26,0.7)', textDecoration: 'none' }}
+            style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(15, 42, 31,0.7)', textDecoration: 'none' }}
           >
             Forgot password?
           </Link>
@@ -82,8 +82,8 @@ export default function LoginForm() {
           className="w-full py-3.5 text-sm tracking-widest uppercase"
           style={{
             fontFamily: 'var(--font-inter)',
-            border: '1px solid rgba(196,155,26,0.45)',
-            color: '#C49B1A',
+            border: '1px solid rgba(15, 42, 31,0.45)',
+            color: '#0F2A1F',
             background: 'transparent',
             letterSpacing: '0.14em',
             cursor: loading ? 'wait' : 'pointer',
@@ -92,8 +92,8 @@ export default function LoginForm() {
           }}
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
-          onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; } }}
-          onMouseLeave={(e) => { if (!loading) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; } }}
+          onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; } }}
+          onMouseLeave={(e) => { if (!loading) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; } }}
         >
           {loading ? 'Signing in…' : 'Sign In'}
         </motion.button>

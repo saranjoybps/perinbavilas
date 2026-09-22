@@ -26,10 +26,10 @@ export default function ForgotPasswordForm() {
   if (status === 'sent') {
     return (
       <div className="text-center py-4">
-        <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '2.5rem', color: '#D4AF37', display: 'block', marginBottom: '1rem' }}>◇</span>
+        <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '2.5rem', color: '#1A3D2E', display: 'block', marginBottom: '1rem' }}>◇</span>
         <p style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.1rem', color: '#1A1008', marginBottom: '0.5rem' }}>Check your inbox</p>
         <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.85rem', color: 'rgba(26,16,8,0.5)', marginBottom: '1.5rem' }}>A password reset link has been sent to {email}.</p>
-        <Link href="/login" style={{ fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: '#C49B1A', textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        <Link href="/login" style={{ fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: '#0F2A1F', textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
           Back to Sign In
         </Link>
       </div>
@@ -57,7 +57,7 @@ export default function ForgotPasswordForm() {
           style={{
             width: '100%',
             background: 'rgba(255,255,255,0.58)',
-            border: '1px solid rgba(212,175,55,0.22)',
+            border: '1px solid rgba(26, 61, 46,0.22)',
             padding: '0.8rem 1rem',
             fontFamily: 'var(--font-inter)',
             fontSize: '0.875rem',
@@ -65,8 +65,8 @@ export default function ForgotPasswordForm() {
             outline: 'none',
             transition: 'border-color 0.2s',
           }}
-          onFocus={(e) => (e.target.style.borderColor = '#C49B1A')}
-          onBlur={(e)  => (e.target.style.borderColor = 'rgba(212,175,55,0.22)')}
+          onFocus={(e) => (e.target.style.borderColor = '#0F2A1F')}
+          onBlur={(e)  => (e.target.style.borderColor = 'rgba(26, 61, 46,0.22)')}
         />
       </div>
       <motion.button
@@ -87,7 +87,7 @@ export default function ForgotPasswordForm() {
         {loading ? 'Sending…' : 'Send Reset Link'}
       </motion.button>
       <p style={{ textAlign: 'center', fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: 'rgba(26,16,8,0.45)' }}>
-        <Link href="/login" style={{ color: '#C49B1A', textDecoration: 'none' }}>Back to Sign In</Link>
+        <Link href="/login" style={{ color: '#0F2A1F', textDecoration: 'none' }}>Back to Sign In</Link>
       </p>
     </form>
   );

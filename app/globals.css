@@ -1,19 +1,27 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* ── Palette ── */
-  --color-white:        #FFFFFF;
-  --color-cloud-white:  #F8FAFC;
-  --color-warm-cream:   #FFF7ED;
-  --color-sky-soft:     #E0F2FE;
-  --color-sky-light:    #BAE6FD;
-  --color-sky-pale:     #F0F9FF;
-  --color-gold:         #D4AF37;
-  --color-gold-deep:    #C49B1A;
-  --color-light-gray:   #E5E7EB;
-  --color-ink:          #1A1008;
-  --color-ink-muted:    rgba(26, 16, 8, 0.55);
-  --color-ink-faint:    rgba(26, 16, 8, 0.35);
+  /* ── Palette (white · dark green) ── */
+  --color-white:         #FFFFFF;
+  --color-cloud-white:   #FFFFFF;
+  --color-warm-cream:    #FAFAF8;
+  --color-forest:        #0F2A1F;
+  --color-forest-deep:   #0A1C14;
+  --color-forest-soft:   #FFFFFF;
+  --color-forest-mid:    #1A3D2E;
+  --color-sky-soft:      #FFFFFF;
+  --color-sky-light:     #F3F5F4;
+  --color-sky-pale:      #FFFFFF;
+  --color-accent:        #1A3D2E;
+  --color-accent-deep:   #0F2A1F;
+  --color-accent-soft:   #A8C4B4;
+  --color-gold:          #1A3D2E;
+  --color-gold-deep:     #0F2A1F;
+  --color-gold-soft:     #A8C4B4;
+  --color-light-gray:    #E5E7EB;
+  --color-ink:           #0F2A1F;
+  --color-ink-muted:     rgba(15, 42, 31, 0.62);
+  --color-ink-faint:     rgba(15, 42, 31, 0.38);
 
   /* ── Fonts ── */
   --font-sans:    var(--font-inter);
@@ -29,8 +37,8 @@
   }
 
   body {
-    background: #F8FAFC;
-    color: #1A1008;
+    background: #FFFFFF;
+    color: #0F2A1F;
     font-family: var(--font-inter, Inter, system-ui, sans-serif);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -38,36 +46,30 @@
   }
 }
 
-/* ── Sky gradient (hero background) ── */
+/* ── Soft white wash (envelope / legacy uses) ── */
 .sky-gradient {
   background: linear-gradient(
     180deg,
-    #2E9FDC 0%,
-    #45AEE6 5%,
-    #6CC4EF 12%,
-    #96D8F5 22%,
-    #BCE8F9 34%,
-    #D6F1FC 46%,
-    #EAFAFD 58%,
-    #F4F1EA 72%,
-    #FFF7ED 85%,
-    #FFFBF7 100%
+    #FFFFFF 0%,
+    #FAFAF8 50%,
+    #FFFFFF 100%
   );
 }
 
 /* ── Glassmorphism cards ── */
 .glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: #FFFFFF;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(15, 42, 31, 0.08);
 }
 
 .glass-warm {
-  background: rgba(255, 251, 245, 0.75);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: #FFFFFF;
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border: 1px solid rgba(15, 42, 31, 0.22);
+  box-shadow: 0 8px 28px rgba(15, 42, 31, 0.04);
 }
 
 /* ── Cloud shapes ── */
@@ -115,17 +117,17 @@
 @keyframes sunDiscGlow {
   0%, 100% {
     box-shadow:
-      0 0 0   0px  rgba(255,255,220,0.90),
-      0 0 38px 10px rgba(255,215,0,0.60),
-      0 0 80px 30px rgba(255,185,0,0.28),
-      0 0 160px 60px rgba(255,165,0,0.12);
+      0 0 0   0px  rgba(232,240,235,0.90),
+      0 0 38px 10px rgba(168,196,180,0.45),
+      0 0 80px 30px rgba(26,61,46,0.22),
+      0 0 160px 60px rgba(15,42,31,0.10);
   }
   50% {
     box-shadow:
-      0 0 0   0px  rgba(255,255,230,0.95),
-      0 0 55px 18px rgba(255,225,0,0.78),
-      0 0 110px 45px rgba(255,195,0,0.40),
-      0 0 200px 80px rgba(255,175,0,0.18);
+      0 0 0   0px  rgba(244,248,245,0.95),
+      0 0 55px 18px rgba(168,196,180,0.55),
+      0 0 110px 45px rgba(26,61,46,0.30),
+      0 0 200px 80px rgba(15,42,31,0.14);
   }
 }
 
@@ -141,7 +143,7 @@
   50%       { transform: translateY(-10px); }
 }
 
-/* ── Gold shimmer text ── */
+/* ── Soft green shimmer text ── */
 @keyframes shimmer {
   0%   { background-position: -200% center; }
   100% { background-position:  200% center; }
@@ -150,11 +152,11 @@
 .gold-shimmer {
   background: linear-gradient(
     90deg,
-    #C49B1A 0%,
-    #D4AF37 38%,
-    #E8CA60 55%,
-    #D4AF37 70%,
-    #C49B1A 100%
+    #0F2A1F 0%,
+    #1A3D2E 38%,
+    #A8C4B4 55%,
+    #1A3D2E 70%,
+    #0F2A1F 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -204,7 +206,7 @@
   z-index: 1;
   height: 120px;
   background: #FFFBF4;
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  border: 1px solid rgba(26, 61, 46, 0.2);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -218,7 +220,7 @@
   font-size: 0.58rem;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: rgba(196, 155, 26, 0.8);
+  color: rgba(15, 42, 31, 0.8);
 }
 
 .envelope-letter-title {
@@ -286,20 +288,20 @@
   color: rgba(26, 16, 8, 0.45);
 }
 
-/* ── Gold rule divider ── */
+/* ── Accent rule divider ── */
 .gold-rule {
   display: block;
   width: 56px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+  background: linear-gradient(90deg, transparent, #1A3D2E, transparent);
 }
 
-/* ── Sunlight glow overlay ── */
+/* ── Soft green glow overlay ── */
 .sunlight-glow {
   background: radial-gradient(
     ellipse 70% 60% at 65% 20%,
-    rgba(255, 230, 100, 0.22) 0%,
-    rgba(255, 200, 60, 0.10) 40%,
+    rgba(168, 196, 180, 0.22) 0%,
+    rgba(26, 61, 46, 0.10) 40%,
     transparent 70%
   );
 }
@@ -314,8 +316,8 @@
 
 .shadow-gold {
   box-shadow:
-    0 4px 24px rgba(212, 175, 55, 0.15),
-    0 1px 6px  rgba(212, 175, 55, 0.08);
+    0 4px 24px rgba(26, 61, 46, 0.15),
+    0 1px 6px  rgba(26, 61, 46, 0.08);
 }
 
 /* ── Section transition cloud strip ── */
@@ -329,12 +331,12 @@
 /* ── Scrollbar ── */
 ::-webkit-scrollbar          { width: 5px; }
 ::-webkit-scrollbar-track    { background: #F8FAFC; }
-::-webkit-scrollbar-thumb    { background: rgba(196, 155, 26, 0.28); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(196, 155, 26, 0.55); }
+::-webkit-scrollbar-thumb    { background: rgba(15, 42, 31, 0.28); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(15, 42, 31, 0.55); }
 
 /* ── Selection ── */
 ::selection {
-  background: rgba(212, 175, 55, 0.18);
+  background: rgba(26, 61, 46, 0.18);
   color: #1A1008;
 }
 
@@ -365,7 +367,7 @@ html.lenis, html.lenis body {
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, #C49B1A, #D4AF37, #E8CA60);
+  background: linear-gradient(90deg, #0F2A1F, #1A3D2E, #A8C4B4);
   transform-origin: 0 50%;
   transform: scaleX(0);
   z-index: 9999;

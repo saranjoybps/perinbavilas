@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import SectionDecor from '@/components/ui/SectionDecor';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -54,8 +55,8 @@ function GalleryCard({ item, index }) {
         aria-label="Members only"
       >
         <svg width="11" height="13" viewBox="0 0 11 13" fill="none" aria-hidden="true">
-          <rect x="1" y="5.5" width="9" height="7" rx="1.5" stroke="#C49B1A" strokeWidth="1.2" />
-          <path d="M3.5 5.5V3.5a2 2 0 014 0v2" stroke="#C49B1A" strokeWidth="1.2" strokeLinecap="round" />
+          <rect x="1" y="5.5" width="9" height="7" rx="1.5" stroke="#0F2A1F" strokeWidth="1.2" />
+          <path d="M3.5 5.5V3.5a2 2 0 014 0v2" stroke="#0F2A1F" strokeWidth="1.2" strokeLinecap="round" />
         </svg>
       </div>
     </div>
@@ -100,14 +101,20 @@ export default function GallerySection() {
       ref={sectionRef}
       id="gallery"
       className="relative overflow-hidden"
-      style={{ background: '#F7F3EB', paddingTop: '6.5rem', paddingBottom: '7rem' }}
+      style={{
+        background: '#FFFFFF',
+        paddingTop: 'clamp(3.5rem, 8vw, 6.5rem)',
+        paddingBottom: 'clamp(10rem, 32vw, 11rem)',
+      }}
     >
-      <div className="max-w-7xl mx-auto px-6 lg:px-12">
-        <div ref={headRef} className="text-center mb-14">
-          <div className="flex items-center justify-center gap-4 mb-5">
+      <SectionDecor position="bottom-left" src="/decorative-2.png" />
+
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-12" style={{ zIndex: 1 }}>
+        <div ref={headRef} className="mb-8 text-center sm:mb-12 md:mb-14">
+          <div className="mb-3 flex items-center justify-center gap-4 sm:mb-5">
             <span
               className="text-xs tracking-[0.4em] uppercase"
-              style={{ fontFamily: 'var(--font-inter)', color: '#C49B1A' }}
+              style={{ fontFamily: 'var(--font-inter)', color: '#0F2A1F' }}
             >
               Visual Memory
             </span>
@@ -118,19 +125,19 @@ export default function GallerySection() {
               fontFamily: 'var(--font-cormorant)',
               fontSize: 'clamp(2.1rem, 4.5vw, 3.4rem)',
               fontWeight: 400,
-              color: '#1A1008',
+              color: '#0F2A1F',
               marginBottom: '1rem',
             }}
           >
             Moments That{' '}
-            <em style={{ fontStyle: 'italic', color: '#C49B1A' }}>Matter</em>
+            <em style={{ fontStyle: 'italic', color: '#0F2A1F' }}>Matter</em>
           </h2>
 
           <p
             style={{
               fontFamily: 'var(--font-inter)',
               fontSize: '1.05rem',
-              color: 'rgba(26,16,8,0.52)',
+              color: 'rgba(15,42,31,0.52)',
               maxWidth: 400,
               lineHeight: 1.75,
               margin: '0 auto',
@@ -153,8 +160,8 @@ export default function GallerySection() {
               className="inline-flex items-center gap-3 px-10 py-4 text-sm tracking-widest uppercase"
               style={{
                 fontFamily: 'var(--font-inter)',
-                border: '1px solid rgba(196,155,26,0.5)',
-                color: '#C49B1A',
+                border: '1px solid rgba(15, 42, 31,0.5)',
+                color: '#0F2A1F',
                 letterSpacing: '0.12em',
               }}
             >

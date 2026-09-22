@@ -3,9 +3,10 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { serializeDoc, errorResponse, verifyAuth } from '@/lib/api-helpers';
 import { sendWelcomeEmail } from '@/lib/email';
 
-const ROLE_OPTIONS = ['member', 'admin', 'super_admin'];
+const ROLE_OPTIONS = ['member', 'admin'];
 
 function normalizeRole(role) {
+  if (role === 'super_admin') return 'admin'; // legacy → admin
   return ROLE_OPTIONS.includes(role) ? role : 'member';
 }
 

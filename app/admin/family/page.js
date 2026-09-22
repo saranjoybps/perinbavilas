@@ -19,9 +19,9 @@ const btnBase = {
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
   padding: '0.65rem 1.5rem',
-  border: '1px solid rgba(196,155,26,0.45)',
+  border: '1px solid rgba(15, 42, 31,0.45)',
   background: 'transparent',
-  color: '#C49B1A',
+  color: '#0F2A1F',
   cursor: 'pointer',
   transition: 'all 0.2s',
 };
@@ -66,7 +66,7 @@ export default function FamilyPage() {
   return (
     <div>
       <div className="mb-8">
-        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.4rem' }}>
+        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(15, 42, 31,0.65)', marginBottom: '0.4rem' }}>
           Admin
         </p>
         <h1 style={{ fontFamily: 'var(--font-cormorant)', fontSize: 'clamp(1.5rem, 4.5vw, 2rem)', fontWeight: 300, color: '#1A1008' }}>
@@ -96,32 +96,32 @@ export default function FamilyPage() {
         <PdfPreview records={filteredRecords}>
           <button
             style={btnBase}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
           >
             Export PDF
           </button>
         </PdfPreview>
         <button
           style={btnBase}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
           onClick={refresh}
         >
           ⟳ Refresh
         </button>
         <button
-          style={{ ...btnBase, color: '#FFF7ED', background: '#C49B1A' }}
+          style={{ ...btnBase, color: '#FFF7ED', background: '#0F2A1F' }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#b38b17'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#C49B1A'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#0F2A1F'; }}
           onClick={handleCreate}
         >
           + Add Family
         </button>
         <button
           style={btnBase}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
           onClick={() => setInterFamilyOpen(true)}
         >
           + Inter-Family Marriage
@@ -130,7 +130,7 @@ export default function FamilyPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.2)', borderTopColor: '#C49B1A', animation: 'spin 1s linear infinite' }} />
+          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.2)', borderTopColor: '#0F2A1F', animation: 'spin 1s linear infinite' }} />
         </div>
       ) : error ? (
         <div className="glass-warm shadow-cloud p-4 max-w-md" style={{ fontFamily: 'var(--font-inter)', fontSize: '0.82rem', color: '#b03030', background: 'rgba(176,48,48,0.06)', border: '1px solid rgba(176,48,48,0.16)' }}>

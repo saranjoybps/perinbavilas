@@ -3,13 +3,14 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useRef } from 'react';
-import { addUser, getAllUsers, updateUserRole, bulkImportUsers, deleteUser } from '@/lib/firebase/firestore';
+import { addUser, getAllUsers, updateUserRole, updateUser, bulkImportUsers, deleteUser } from '@/lib/firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import * as XLSX from 'xlsx';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatName } from '@/lib/formatters';
 
-const ROLE_OPTIONS = ['member', 'admin', 'super_admin'];
+const ROLE_OPTIONS = ['member', 'admin'];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const COLUMN_MAP = {
   email: 'email',
@@ -25,30 +26,88 @@ const COLUMN_MAP = {
   'invite code': 'code',
 };
 
+const TEMPLATE_ROWS = [
+  ['email', 'name', 'password', 'role', 'code'],
+  ['member1@example.com', 'Anita Perinbam', 'TempPass123', 'member', '1/2'],
+  ['member2@example.com', 'David Kumar', 'TempPass123', 'member', '1/3'],
+  ['admin.helper@example.com', 'Sarah Admin', 'TempPass123', 'admin', ''],
+];
+
+function normalizeImportRole(role) {
+  const value = String(role || 'member').trim().toLowerCase();
+  if (value === 'super_admin') return 'admin';
+  return ROLE_OPTIONS.includes(value) ? value : 'member';
+}
+
 function parseExcelRows(rows) {
-  if (!rows || rows.length < 2) return [];
-  const headerRow = rows[0].map((h) => String(h).trim().toLowerCase());
+  if (!rows || rows.length < 2) {
+    return { users: [], parseError: 'File needs a header row and at least one data row.' };
+  }
+
+  const headerRow = rows[0].map((h) => String(h ?? '').trim().toLowerCase());
   const cols = headerRow.map((h) => COLUMN_MAP[h] || null);
-  return rows.slice(1).map((row) => {
-    const user = { email: '', name: '', password: '', role: 'member', code: '' };
+  const hasEmail = cols.includes('email');
+  const hasName = cols.includes('name');
+  const hasPassword = cols.includes('password');
+
+  if (!hasEmail || !hasName || !hasPassword) {
+    return {
+      users: [],
+      parseError: 'Required columns missing. Use headers: email, name, password, role, code',
+    };
+  }
+
+  const seenEmails = new Set();
+  const users = [];
+
+  rows.slice(1).forEach((row, idx) => {
+    const isEmpty = !row || row.every((cell) => cell == null || String(cell).trim() === '');
+    if (isEmpty) return;
+
+    const user = { email: '', name: '', password: '', role: 'member', code: '', issues: [] };
     cols.forEach((field, i) => {
       const val = row[i] != null ? String(row[i]).trim() : '';
       if (field) user[field] = val;
     });
-    return user;
-  }).filter((u) => u.email && u.name);
+
+    user.email = user.email.toLowerCase();
+    user.role = normalizeImportRole(user.role);
+
+    if (!user.email) user.issues.push('missing email');
+    else if (!EMAIL_RE.test(user.email)) user.issues.push('invalid email');
+
+    if (!user.name) user.issues.push('missing name');
+
+    if (!user.password) user.issues.push('missing password');
+    else if (user.password.length < 6) user.issues.push('password too short (min 6)');
+
+    if (user.email && seenEmails.has(user.email)) {
+      user.issues.push('duplicate email in file');
+    } else if (user.email) {
+      seenEmails.add(user.email);
+    }
+
+    users.push(user);
+  });
+
+  if (!users.length) {
+    return { users: [], parseError: 'No data rows found in the spreadsheet.' };
+  }
+
+  return { users, parseError: '' };
 }
 
 export default function AdminUsersPage() {
-  const { loading: authLoading, isAdmin, role: myRole } = useAuth();
-  const isSuperAdmin = myRole === 'super_admin';
-  const availableRoles = isSuperAdmin ? ROLE_OPTIONS : ['member', 'admin'];
+  const { loading: authLoading, isAdmin, role: myRole, user } = useAuth();
+  const availableRoles = ROLE_OPTIONS;
   const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [acting,  setActing]  = useState(null);
   const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [editingCodeUid, setEditingCodeUid] = useState(null);
+  const [codeDraft, setCodeDraft] = useState('');
   const [form, setForm] = useState({
     email: '',
     displayName: '',
@@ -64,39 +123,78 @@ export default function AdminUsersPage() {
   const [bulkResult, setBulkResult] = useState(null);
 
   const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
+    readExcelFile(file);
+    e.target.value = '';
+  };
+
+  const readExcelFile = (file) => {
     setFileName(file.name);
     setParsedUsers([]);
     setBulkResult(null);
+    setError('');
+    setMessage('');
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         const data = new Uint8Array(ev.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        setParsedUsers(parseExcelRows(rows));
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        const { users, parseError } = parseExcelRows(rows);
+        if (parseError) {
+          setError(parseError);
+          setParsedUsers([]);
+          return;
+        }
+        setParsedUsers(users);
       } catch {
         setError('Failed to parse Excel file. Ensure it is a valid .xlsx or .xls file.');
+        setParsedUsers([]);
       }
     };
     reader.readAsArrayBuffer(file);
   };
 
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet(TEMPLATE_ROWS);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Users');
+    XLSX.writeFile(wb, 'users-import-template.xlsx');
+  };
+
   const handleBulkImport = async () => {
+    const invalid = parsedUsers.filter((u) => u.issues?.length);
+    if (invalid.length) {
+      setError(`Fix ${invalid.length} row(s) with validation issues before importing.`);
+      return;
+    }
+
     setBulkImporting(true);
     setBulkResult(null);
     setError('');
     setMessage('');
     try {
-      const result = await bulkImportUsers(parsedUsers);
+      const payload = parsedUsers.map(({ email, name, password, role, code }) => ({
+        email,
+        name,
+        password,
+        role,
+        code,
+      }));
+      const result = await bulkImportUsers(payload);
       setBulkResult(result);
       setParsedUsers([]);
       setFileName('');
       await load();
     } catch (err) {
-      setBulkResult({ created: 0, failed: parsedUsers.length, errors: parsedUsers.map((u) => ({ email: u.email, error: err.message })) });
+      setBulkResult({
+        created: 0,
+        failed: parsedUsers.length,
+        errors: parsedUsers.map((u) => ({ email: u.email, error: err.message })),
+      });
     } finally {
       setBulkImporting(false);
     }
@@ -134,16 +232,40 @@ export default function AdminUsersPage() {
     }
   };
 
-  const toggleRole = async (user, nextRole) => {
-    setActing(user.uid);
+  const toggleRole = async (userRow, nextRole) => {
+    setActing(userProp.uid);
     setError('');
     setMessage('');
     try {
-      await updateUserRole(user.uid, nextRole);
+      await updateUserRole(userProp.uid, nextRole === 'super_admin' ? 'admin' : nextRole);
       await load();
-      setMessage('Role updated in users and authentication.');
+      setMessage('Role updated.');
     } catch (err) {
       setError(err.message || 'Failed to update role.');
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const startEditCode = (u) => {
+    setEditingCodeUid(u.uid);
+    setCodeDraft(u.code || '');
+    setError('');
+    setMessage('');
+  };
+
+  const saveFamilyCode = async (u) => {
+    setActing(u.uid);
+    setError('');
+    setMessage('');
+    try {
+      await updateUser(u.uid, { code: codeDraft.trim() });
+      setEditingCodeUid(null);
+      setCodeDraft('');
+      setMessage('Family Code updated.');
+      await load();
+    } catch (err) {
+      setError(err.message || 'Failed to update Family Code.');
     } finally {
       setActing(null);
     }
@@ -181,7 +303,7 @@ export default function AdminUsersPage() {
   const inputStyle = {
     width: '100%',
     background: 'rgba(255,255,255,0.72)',
-    border: '1px solid rgba(212,175,55,0.22)',
+    border: '1px solid rgba(26, 61, 46,0.22)',
     padding: '0.7rem 0.85rem',
     fontFamily: 'var(--font-inter)',
     fontSize: '0.82rem',
@@ -219,7 +341,7 @@ export default function AdminUsersPage() {
   return (
     <>
       <div className="mb-8">
-        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.4rem' }}>Admin</p>
+        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(15, 42, 31,0.65)', marginBottom: '0.4rem' }}>Admin</p>
         <h1 style={{ fontFamily: 'var(--font-cormorant)', fontSize: 'clamp(1.5rem, 4.5vw, 2rem)', fontWeight: 300, color: '#1A1008' }}>Users</h1>
         <span className="gold-rule block mt-3" />
       </div>
@@ -227,7 +349,7 @@ export default function AdminUsersPage() {
       <form onSubmit={handleCreateUser} className="glass-warm shadow-cloud p-4 md:p-5 mb-6 max-w-3xl">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
           <div>
-            <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.7)', marginBottom: '0.25rem' }}>
+            <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(15, 42, 31,0.7)', marginBottom: '0.25rem' }}>
               New User
             </p>
             <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.05rem', fontWeight: 400, color: '#1A1008' }}>
@@ -240,8 +362,8 @@ export default function AdminUsersPage() {
             className="px-7 py-3 text-xs tracking-widest uppercase"
             style={{
               fontFamily: 'var(--font-inter)',
-              border: '1px solid rgba(196,155,26,0.45)',
-              color: '#C49B1A',
+              border: '1px solid rgba(15, 42, 31,0.45)',
+              color: '#0F2A1F',
               background: 'transparent',
               cursor: creating ? 'wait' : 'pointer',
               opacity: creating ? 0.65 : 1,
@@ -249,8 +371,8 @@ export default function AdminUsersPage() {
               whiteSpace: 'nowrap',
               transition: 'all 0.2s',
             }}
-            onMouseEnter={(e) => { if (!creating) { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; } }}
-            onMouseLeave={(e) => { if (!creating) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; } }}
+            onMouseEnter={(e) => { if (!creating) { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; } }}
+            onMouseLeave={(e) => { if (!creating) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; } }}
           >
             {creating ? 'Creating...' : 'Add User'}
           </button>
@@ -320,13 +442,13 @@ export default function AdminUsersPage() {
             />
           </div>
           <div className="lg:col-span-3">
-            <label style={labelStyle}>Code Optional</label>
+            <label style={labelStyle}>Family Code</label>
             <input
               type="text"
               value={form.code}
               onChange={(e) => setForm({ ...form, code: e.target.value })}
               style={inputStyle}
-              placeholder="Family or invite code"
+              placeholder="Family code from Family Book"
             />
           </div>
         </div>
@@ -335,30 +457,46 @@ export default function AdminUsersPage() {
       <div className="glass-warm shadow-cloud p-4 md:p-5 mb-6 max-w-3xl">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
           <div>
-            <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.7)', marginBottom: '0.25rem' }}>
+            <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(15, 42, 31,0.7)', marginBottom: '0.25rem' }}>
               Bulk Import
             </p>
             <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.05rem', fontWeight: 400, color: '#1A1008' }}>
               Import multiple users
             </h2>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={downloadTemplate}
+              className="px-5 py-3 text-xs tracking-widest uppercase"
+              style={{
+                fontFamily: 'var(--font-inter)',
+                border: '1px solid rgba(26, 61, 46,0.3)',
+                color: 'rgba(26,16,8,0.55)',
+                background: 'transparent',
+                cursor: 'pointer',
+                letterSpacing: '0.14em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Download Template
+            </button>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               className="px-5 py-3 text-xs tracking-widest uppercase"
               style={{
                 fontFamily: 'var(--font-inter)',
-                border: '1px solid rgba(196,155,26,0.45)',
-                color: '#C49B1A',
+                border: '1px solid rgba(15, 42, 31,0.45)',
+                color: '#0F2A1F',
                 background: 'transparent',
                 cursor: 'pointer',
                 letterSpacing: '0.14em',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
             >
               {fileName ? 'Change File' : 'Select Excel File'}
             </button>
@@ -366,15 +504,15 @@ export default function AdminUsersPage() {
               <button
                 type="button"
                 onClick={handleBulkImport}
-                disabled={bulkImporting}
+                disabled={bulkImporting || parsedUsers.some((u) => u.issues?.length)}
                 className="px-5 py-3 text-xs tracking-widest uppercase"
                 style={{
                   fontFamily: 'var(--font-inter)',
-                  border: '1px solid rgba(196,155,26,0.45)',
+                  border: '1px solid rgba(15, 42, 31,0.45)',
                   color: '#FFF7ED',
-                  background: '#C49B1A',
-                  cursor: bulkImporting ? 'wait' : 'pointer',
-                  opacity: bulkImporting ? 0.65 : 1,
+                  background: '#0F2A1F',
+                  cursor: bulkImporting || parsedUsers.some((u) => u.issues?.length) ? 'not-allowed' : 'pointer',
+                  opacity: bulkImporting || parsedUsers.some((u) => u.issues?.length) ? 0.65 : 1,
                   letterSpacing: '0.14em',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.2s',
@@ -389,24 +527,31 @@ export default function AdminUsersPage() {
         <input
           ref={fileRef}
           type="file"
-          accept=".xlsx,.xls"
+          accept=".xlsx,.xls,.csv"
           onChange={handleFileUpload}
           style={{ display: 'none' }}
         />
 
         <div
           onClick={() => fileRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const file = e.dataTransfer.files?.[0];
+            if (file) readExcelFile(file);
+          }}
           style={{
-            border: '2px dashed rgba(212,175,55,0.35)',
+            border: '2px dashed rgba(26, 61, 46,0.35)',
             borderRadius: '4px',
             padding: '2rem 1rem',
             textAlign: 'center',
             cursor: 'pointer',
-            background: fileName ? 'rgba(212,175,55,0.04)' : 'transparent',
+            background: fileName ? 'rgba(26, 61, 46,0.04)' : 'transparent',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(212,175,55,0.08)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = fileName ? 'rgba(212,175,55,0.04)' : 'transparent'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(26, 61, 46,0.08)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = fileName ? 'rgba(26, 61, 46,0.04)' : 'transparent'; }}
         >
           <p style={{
             fontFamily: 'var(--font-inter)',
@@ -416,7 +561,7 @@ export default function AdminUsersPage() {
           }}>
             {fileName
               ? `Selected: ${fileName}`
-              : 'Click or drag an Excel file here (.xlsx / .xls)'}
+              : 'Click or drag an Excel file here (.xlsx / .xls / .csv)'}
           </p>
           <p style={{
             fontFamily: 'var(--font-inter)',
@@ -425,7 +570,7 @@ export default function AdminUsersPage() {
             marginTop: '0.4rem',
             marginBottom: 0,
           }}>
-            Columns: email, name, password, role, code
+            Required: email, name, password · Optional: role (member|admin), code (Family Code)
           </p>
         </div>
 
@@ -453,26 +598,51 @@ export default function AdminUsersPage() {
 
         {parsedUsers.length > 0 && (
           <div style={{ marginTop: '0.75rem', overflowX: 'auto' }}>
+            {parsedUsers.some((u) => u.issues?.length) && (
+              <p style={{
+                fontFamily: 'var(--font-inter)',
+                fontSize: '0.75rem',
+                color: '#b03030',
+                marginBottom: '0.5rem',
+              }}>
+                Resolve highlighted row issues before importing. Duplicate emails in the file or already registered accounts are rejected.
+              </p>
+            )}
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-inter)', fontSize: '0.78rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
+                <tr style={{ borderBottom: '1px solid rgba(26, 61, 46,0.2)' }}>
                   <th style={thStyle}>#</th>
                   <th style={thStyle}>Email</th>
                   <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Password</th>
                   <th style={thStyle}>Role</th>
                   <th style={thStyle}>Code</th>
+                  <th style={thStyle}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {parsedUsers.map((u, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(212,175,55,0.08)' }}>
-                    <td style={tdStyle}>{i + 1}</td>
-                    <td style={tdStyle}>{u.email}</td>
-                    <td style={tdStyle}>{u.name}</td>
-                    <td style={tdStyle}>{u.role}</td>
-                    <td style={tdStyle}>{u.code || '—'}</td>
-                  </tr>
-                ))}
+                {parsedUsers.map((u, i) => {
+                  const hasIssues = u.issues?.length > 0;
+                  return (
+                    <tr
+                      key={i}
+                      style={{
+                        borderBottom: '1px solid rgba(26, 61, 46,0.08)',
+                        background: hasIssues ? 'rgba(176,48,48,0.05)' : 'transparent',
+                      }}
+                    >
+                      <td style={tdStyle}>{i + 1}</td>
+                      <td style={tdStyle}>{u.email || '—'}</td>
+                      <td style={tdStyle}>{u.name || '—'}</td>
+                      <td style={tdStyle}>{u.password ? '••••••' : '—'}</td>
+                      <td style={tdStyle}>{u.role}</td>
+                      <td style={tdStyle}>{u.code || '—'}</td>
+                      <td style={{ ...tdStyle, color: hasIssues ? '#b03030' : '#2f6b42', whiteSpace: 'normal' }}>
+                        {hasIssues ? u.issues.join(', ') : 'Ready'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -481,94 +651,146 @@ export default function AdminUsersPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.2)', borderTopColor: '#C49B1A', animation: 'spin 1s linear infinite' }} />
+          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.2)', borderTopColor: '#0F2A1F', animation: 'spin 1s linear infinite' }} />
         </div>
       ) : (
         <div className="flex flex-col gap-3 max-w-3xl">
-          {users.map((u) => (
-            <div key={u.uid} className="glass-warm shadow-cloud p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: '#1A1008', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {formatName(u.displayName) || 'Unnamed Member'}
-                </p>
-                <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(26,16,8,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {u.email}
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span style={{
-                  fontFamily: 'var(--font-inter)', fontSize: '0.6rem', letterSpacing: '0.3em',
-                  textTransform: 'uppercase', padding: '0.25rem 0.65rem',
-                  background: u.role === 'super_admin'
-                    ? 'rgba(90,143,170,0.12)'
-                    : u.role === 'admin'
-                      ? 'rgba(196,155,26,0.1)'
-                      : 'rgba(26,16,8,0.05)',
-                  color: u.role === 'super_admin'
-                    ? '#5A8FAA'
-                    : u.role === 'admin'
-                      ? '#C49B1A'
-                      : 'rgba(26,16,8,0.4)',
-                  border: `1px solid ${u.role === 'super_admin'
-                    ? 'rgba(90,143,170,0.3)'
-                    : u.role === 'admin'
-                      ? 'rgba(196,155,26,0.3)'
-                      : 'rgba(26,16,8,0.1)'}`,
-                }}>
-                  {u.role || 'member'}
-                </span>
-                <select
-                  value={u.role || 'member'}
-                  onChange={(e) => toggleRole(u, e.target.value)}
-                  disabled={acting === u.uid}
-                  style={{
-                    fontFamily: 'var(--font-inter)',
-                    fontSize: '0.68rem',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    background: 'transparent',
-                    border: '1px solid rgba(212,175,55,0.3)',
-                    color: '#1A1008',
-                    padding: '0.35rem 0.55rem',
-                    cursor: acting === u.uid ? 'wait' : 'pointer',
-                    opacity: acting === u.uid ? 0.5 : 1,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {availableRoles.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
-                {(isSuperAdmin || (myRole === 'admin' && u.role === 'member')) && u.uid !== myRole && (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmUser(u)}
-                    disabled={deleting === u.uid}
+          {users.map((u) => {
+            const displayRole = u.role === 'super_admin' ? 'admin' : (u.role || 'member');
+            return (
+            <div key={u.uid} className="glass-warm shadow-cloud p-4 md:p-5 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: '#1A1008', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {formatName(u.displayName) || 'Unnamed Member'}
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(26,16,8,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.email}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 flex-wrap">
+                  <span style={{
+                    fontFamily: 'var(--font-inter)', fontSize: '0.6rem', letterSpacing: '0.3em',
+                    textTransform: 'uppercase', padding: '0.25rem 0.65rem',
+                    background: displayRole === 'admin' ? 'rgba(15, 42, 31,0.1)' : 'rgba(26,16,8,0.05)',
+                    color: displayRole === 'admin' ? '#0F2A1F' : 'rgba(26,16,8,0.4)',
+                    border: `1px solid ${displayRole === 'admin' ? 'rgba(15, 42, 31,0.3)' : 'rgba(26,16,8,0.1)'}`,
+                  }}>
+                    {displayRole}
+                  </span>
+                  <select
+                    value={displayRole}
+                    onChange={(e) => toggleRole(u, e.target.value)}
+                    disabled={acting === u.uid}
                     style={{
                       fontFamily: 'var(--font-inter)',
-                      fontSize: '0.6rem',
-                      letterSpacing: '0.14em',
+                      fontSize: '0.68rem',
+                      letterSpacing: '0.08em',
                       textTransform: 'uppercase',
                       background: 'transparent',
-                      border: '1px solid rgba(176,48,48,0.3)',
-                      color: deleting === u.uid ? '#999' : '#b03030',
+                      border: '1px solid rgba(26, 61, 46,0.3)',
+                      color: '#1A1008',
                       padding: '0.35rem 0.55rem',
-                      cursor: deleting === u.uid ? 'wait' : 'pointer',
-                      opacity: deleting === u.uid ? 0.5 : 1,
+                      cursor: acting === u.uid ? 'wait' : 'pointer',
+                      opacity: acting === u.uid ? 0.5 : 1,
                       whiteSpace: 'nowrap',
-                      transition: 'all 0.2s',
                     }}
-                    onMouseEnter={(e) => { if (deleting !== u.uid) { e.currentTarget.style.background = '#b03030'; e.currentTarget.style.color = '#fff'; } }}
-                    onMouseLeave={(e) => { if (deleting !== u.uid) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#b03030'; } }}
                   >
-                    {deleting === u.uid ? 'Deleting...' : 'Delete'}
-                  </button>
+                    {availableRoles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                  {myRole === 'admin' && displayRole === 'member' && u.uid !== user?.uid && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmUser(u)}
+                      disabled={deleting === u.uid}
+                      style={{
+                        fontFamily: 'var(--font-inter)',
+                        fontSize: '0.6rem',
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        background: 'transparent',
+                        border: '1px solid rgba(176,48,48,0.3)',
+                        color: deleting === u.uid ? '#999' : '#b03030',
+                        padding: '0.35rem 0.55rem',
+                        cursor: deleting === u.uid ? 'wait' : 'pointer',
+                        opacity: deleting === u.uid ? 0.5 : 1,
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => { if (deleting !== u.uid) { e.currentTarget.style.background = '#b03030'; e.currentTarget.style.color = '#fff'; } }}
+                      onMouseLeave={(e) => { if (deleting !== u.uid) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#b03030'; } }}
+                    >
+                      {deleting === u.uid ? 'Deleting...' : 'Delete'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2" style={{ borderTop: '1px solid rgba(26, 61, 46,0.12)', paddingTop: '0.75rem' }}>
+                <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.62rem', letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(26,16,8,0.42)', minWidth: '7rem' }}>
+                  Family Code
+                </p>
+                {editingCodeUid === u.uid ? (
+                  <>
+                    <input
+                      type="text"
+                      value={codeDraft}
+                      onChange={(e) => setCodeDraft(e.target.value)}
+                      style={{
+                        flex: 1,
+                        background: 'rgba(255,255,255,0.72)',
+                        border: '1px solid rgba(26, 61, 46,0.22)',
+                        padding: '0.45rem 0.65rem',
+                        fontFamily: 'var(--font-inter)',
+                        fontSize: '0.78rem',
+                        color: '#1A1008',
+                        outline: 'none',
+                      }}
+                      placeholder="Enter family code"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => saveFamilyCode(u)}
+                      disabled={acting === u.uid}
+                      style={{ fontFamily: 'var(--font-inter)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', border: '1px solid rgba(15, 42, 31,0.45)', color: '#0F2A1F', background: 'transparent', padding: '0.4rem 0.7rem', cursor: acting === u.uid ? 'wait' : 'pointer' }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditingCodeUid(null); setCodeDraft(''); }}
+                      style={{ fontFamily: 'var(--font-inter)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', border: 'none', color: 'rgba(26,16,8,0.4)', background: 'transparent', padding: '0.4rem 0.5rem', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span style={{
+                      fontFamily: 'var(--font-inter)',
+                      fontSize: '0.78rem',
+                      color: u.code ? '#1A1008' : 'rgba(26,16,8,0.35)',
+                      flex: 1,
+                    }}>
+                      {u.code || 'Not assigned'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => startEditCode(u)}
+                      style={{ fontFamily: 'var(--font-inter)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', border: '1px solid rgba(26, 61, 46,0.3)', color: 'rgba(26,16,8,0.55)', background: 'transparent', padding: '0.4rem 0.7rem', cursor: 'pointer' }}
+                    >
+                      Edit Code
+                    </button>
+                  </>
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       <ConfirmModal

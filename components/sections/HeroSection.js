@@ -6,251 +6,159 @@ import { motion } from 'framer-motion';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import CloudLayer from '@/components/clouds/CloudLayer';
-import FloatingParticles from '@/components/clouds/FloatingParticles';
 
 gsap.registerPlugin(ScrollTrigger);
 
+const HERO_VIDEO =
+  'https://res.cloudinary.com/bsaqrrl4/video/upload/q_auto:eco/v1790068368/11904662_1280_720_60fps_nhnbbv.mp4';
+const HERO_POSTER =
+  'https://res.cloudinary.com/bsaqrrl4/video/upload/so_2,w_1600,q_auto,f_jpg/v1790068368/11904662_1280_720_60fps_nhnbbv.jpg';
+
 const fadeUp = {
-  hidden: { opacity: 0, y: 36, filter: 'blur(4px)' },
+  hidden: { opacity: 0, y: 28 },
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 1.1, delay: i * 0.18, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 1.05, delay: 0.2 + i * 0.18, ease: [0.22, 1, 0.36, 1] },
   }),
 };
 
 export default function HeroSection() {
   const sectionRef = useRef(null);
-  const farRef     = useRef(null);
-  const midRef     = useRef(null);
-  const nearRef    = useRef(null);
-  const sunRef     = useRef(null);
-  const raysRef    = useRef(null);
   const contentRef = useRef(null);
+  const videoRef = useRef(null);
 
-  // Mouse parallax — x-axis only to avoid conflicting with scroll-based y parallax
   useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    const xFar  = gsap.quickTo(farRef.current,  'x', { duration: 1.2, ease: 'power2.out' });
-    const xMid  = gsap.quickTo(midRef.current,  'x', { duration: 0.9, ease: 'power2.out' });
-    const xNear = gsap.quickTo(nearRef.current, 'x', { duration: 0.6, ease: 'power2.out' });
-
-    const onMove = (e) => {
-      const { left, width } = section.getBoundingClientRect();
-      const xPct = ((e.clientX - left) / width - 0.5) * 2; // -1 to 1
-      xFar(xPct * 18);
-      xMid(xPct * 10);
-      xNear(xPct * 5);
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.playsInline = true;
+    const tryPlay = () => {
+      video.play().catch(() => {});
     };
-
-    const onLeave = () => {
-      xFar(0);
-      xMid(0);
-      xNear(0);
-    };
-
-    section.addEventListener('mousemove', onMove);
-    section.addEventListener('mouseleave', onLeave);
+    tryPlay();
+    video.addEventListener('loadeddata', tryPlay);
+    document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
     return () => {
-      section.removeEventListener('mousemove', onMove);
-      section.removeEventListener('mouseleave', onLeave);
+      video.removeEventListener('loadeddata', tryPlay);
+      document.removeEventListener('touchstart', tryPlay);
     };
   }, []);
 
   useGSAP(() => {
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: sectionRef.current,
-        start:   'top top',
-        end:     'bottom top',
-        scrub:   1.4,
-      },
+    const mm = gsap.matchMedia();
+    mm.add('(min-width: 768px)', () => {
+      gsap.to(contentRef.current, {
+        y: '10%',
+        opacity: 0.35,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.2,
+        },
+      });
     });
-
-    // Parallax cloud layers — deeper depth = more travel
-    tl.to(farRef.current,  { y: '-40%', ease: 'none' }, 0)
-      .to(midRef.current,  { y: '-22%', ease: 'none' }, 0)
-      .to(nearRef.current, { y: '-12%', ease: 'none' }, 0)
-      .to(sunRef.current,   { y: '-20%', opacity: 0.5, ease: 'none' }, 0)
-      .to(raysRef.current,   { y: '-20%', ease: 'none' }, 0)
-      .to(contentRef.current, { y: '14%', opacity: 0.2, ease: 'none' }, 0);
-
-    // Ambient scale breathing — runs on loop, no conflict with scroll y or mouse x
-    gsap.to(farRef.current,  { scale: 1.08, duration: 14, ease: 'sine.inOut', yoyo: true, repeat: -1 });
-    gsap.to(midRef.current,  { scale: 1.05, duration: 10, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: 2 });
-    gsap.to(nearRef.current, { scale: 1.03, duration: 8,  ease: 'sine.inOut', yoyo: true, repeat: -1, delay: 1 });
-    gsap.to(sunRef.current,  { scale: 1.05, duration: 8,  ease: 'sine.inOut', yoyo: true, repeat: -1, delay: 0.5 });
-    // God rays slowly sweep ±8° to simulate shifting sunlight
-    gsap.to(raysRef.current, { rotation: 8, duration: 22, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: -5 });
+    return () => mm.revert();
   }, { scope: sectionRef });
 
   return (
     <section
       ref={sectionRef}
       id="hero"
-      className="relative w-full overflow-hidden min-h-[560px] md:min-h-[680px]"
-      style={{ height: '100svh' }}
+      className="relative w-full overflow-hidden"
+      style={{
+        height: '100svh',
+        minHeight: 520,
+        background: '#0F2A1F',
+      }}
     >
-      {/* ── Sky gradient background ── */}
-      <div className="absolute inset-0 sky-gradient" />
-
-      {/* ── Animated Sun ── */}
-      <div
-        ref={sunRef}
-        className="absolute pointer-events-none"
-        style={{ top: '7%', right: '13%', zIndex: 0 }}
+      <video
+        ref={videoRef}
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{ zIndex: 0, pointerEvents: 'none' }}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        poster={HERO_POSTER}
         aria-hidden="true"
       >
-        {/* Outer atmospheric haze */}
-        <div style={{
-          position: 'absolute',
-          width: 560, height: 560,
-          top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255,235,100,0.18) 0%, rgba(255,200,50,0.10) 40%, transparent 70%)',
-          filter: 'blur(48px)',
-          animation: 'sunPulse 8s ease-in-out infinite',
-        }} />
-        {/* Mid corona */}
-        <div style={{
-          position: 'absolute',
-          width: 220, height: 220,
-          top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255,240,150,0.35) 0%, rgba(255,210,60,0.18) 55%, transparent 80%)',
-          filter: 'blur(10px)',
-          animation: 'sunPulse 8s ease-in-out infinite',
-          animationDelay: '-1s',
-        }} />
-        {/* Rotating rays */}
-        <div style={{
-          position: 'absolute',
-          width: 0, height: 0,
-          top: '50%', left: '50%',
-          animation: 'sunRaysSpin 60s linear infinite',
-        }}>
-          {[0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5].map((deg, i) => (
-            <div key={i} style={{
-              position: 'absolute',
-              width: 2,
-              height: i % 2 === 0 ? 110 : 80,
-              marginLeft: -1,
-              marginTop: 52,
-              transformOrigin: '50% 0%',
-              transform: `rotate(${deg}deg)`,
-              background: `linear-gradient(to bottom, rgba(255,220,60,${i % 2 === 0 ? '0.55' : '0.35'}), transparent)`,
-              borderRadius: 2,
-            }} />
-          ))}
-        </div>
-        {/* Sun disc */}
-        <div style={{
-          position: 'absolute',
-          width: 92, height: 92,
-          top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle at 38% 38%, #FFFDE0 0%, #FFE040 35%, #FFC200 65%, #FFB300 100%)',
-          animation: 'sunDiscGlow 8s ease-in-out infinite',
-        }} />
-      </div>
+        <source src={HERO_VIDEO} type="video/mp4" />
+      </video>
 
-      {/* ── Cloud layers — oversized so parallax has travel room ── */}
-      <div ref={farRef}  className="absolute pointer-events-none" style={{ top: '-20%', left: 0, right: 0, height: '140%', zIndex: 1 }}>
-        <CloudLayer depth="far" />
-      </div>
-
-      {/* ── God rays — light shafts sweeping from sun through clouds ── */}
       <div
-        ref={raysRef}
-        className="absolute pointer-events-none"
-        style={{ top: '7%', right: '13%', width: 0, height: 0, zIndex: 2 }}
-        aria-hidden="true"
-      >
-        {[
-          { angle: -44, w: 160, h: '118vh', op: 0.12, dur: 9  },
-          { angle: -30, w:  85, h: '108vh', op: 0.08, dur: 12 },
-          { angle: -16, w: 130, h: '112vh', op: 0.14, dur: 8  },
-          { angle:  -4, w:  65, h:  '96vh', op: 0.09, dur: 13 },
-          { angle:  10, w: 150, h: '115vh', op: 0.13, dur: 10 },
-          { angle:  24, w:  80, h: '104vh', op: 0.08, dur: 14 },
-          { angle:  40, w: 120, h: '110vh', op: 0.11, dur: 9  },
-          { angle:  56, w:  55, h:  '90vh', op: 0.07, dur: 16 },
-          { angle:  70, w:  95, h:  '98vh', op: 0.09, dur: 11 },
-        ].map(({ angle, w, h, op, dur }, i) => (
-          <div
-            key={i}
-            style={{
-              position:        'absolute',
-              width:           `${w}px`,
-              height:          h,
-              top:             0,
-              left:            -w / 2,
-              transformOrigin: 'top center',
-              transform:       `rotate(${angle}deg)`,
-              background:      `linear-gradient(to bottom, rgba(255,242,150,${(op * 2.2).toFixed(2)}) 0%, rgba(255,228,80,${op.toFixed(2)}) 18%, rgba(255,210,50,${(op * 0.4).toFixed(2)}) 55%, transparent 82%)`,
-              filter:          'blur(24px)',
-              animation:       `godRaySweep ${dur}s ease-in-out infinite`,
-              animationDelay:  `${(i * -2.3).toFixed(1)}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      <div ref={midRef}  className="absolute pointer-events-none" style={{ top: '-15%', left: 0, right: 0, height: '130%', zIndex: 3 }}>
-        <CloudLayer depth="mid" />
-      </div>
-      <div ref={nearRef} className="absolute pointer-events-none" style={{ top: '-10%', left: 0, right: 0, height: '120%', zIndex: 4 }}>
-        <CloudLayer depth="near" />
-      </div>
-
-      {/* ── Floating dust particles ── */}
-      <div className="absolute inset-0" style={{ zIndex: 5 }}>
-        <FloatingParticles count={8} />
-      </div>
-
-      {/* ── Bottom fade-out gradient ── */}
-      <div
-        className="absolute bottom-0 left-0 right-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          height: '30%',
-          background: 'linear-gradient(to bottom, transparent, rgba(244,247,250,0.96))',
-          zIndex: 5,
+          zIndex: 1,
+          background:
+            'linear-gradient(180deg, rgba(10,28,20,0.62) 0%, rgba(10,28,20,0.28) 38%, rgba(10,28,20,0.38) 68%, rgba(10,28,20,0.55) 100%)',
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          zIndex: 1,
+          background:
+            'radial-gradient(ellipse 70% 55% at 50% 42%, rgba(10,28,20,0.08) 0%, rgba(10,28,20,0.45) 100%)',
         }}
         aria-hidden="true"
       />
 
-      {/* ── Hero content ── */}
       <div
         ref={contentRef}
-        className="relative flex flex-col items-center justify-center h-full text-center px-6"
-        style={{ zIndex: 6 }}
+        className="relative flex h-full flex-col items-center justify-center text-center"
+        style={{
+          zIndex: 3,
+          paddingLeft: 'max(1.25rem, env(safe-area-inset-left))',
+          paddingRight: 'max(1.25rem, env(safe-area-inset-right))',
+          paddingTop: 'max(4.5rem, env(safe-area-inset-top))',
+          paddingBottom: 'max(4rem, env(safe-area-inset-bottom))',
+        }}
       >
-        {/* Eyebrow */}
         <motion.div
-          className="flex items-center gap-4 mb-8"
           variants={fadeUp}
           initial="hidden"
           animate="visible"
           custom={0}
+          className="mb-5 flex items-center gap-3 sm:mb-6 sm:gap-4 md:mb-7"
         >
-          <span className="gold-rule" />
           <span
-            className="text-xs tracking-[0.45em] uppercase"
-            style={{ fontFamily: 'var(--font-inter)', color: '#C49B1A' }}
+            aria-hidden="true"
+            style={{
+              display: 'block',
+              width: 28,
+              height: 1,
+              background: 'linear-gradient(90deg, transparent, rgba(168, 196, 180,0.85))',
+            }}
+          />
+          <p
+            style={{
+              fontFamily: 'var(--font-inter)',
+              fontSize: 'clamp(0.58rem, 2.4vw, 0.7rem)',
+              letterSpacing: 'clamp(0.22em, 1.8vw, 0.46em)',
+              textTransform: 'uppercase',
+              color: 'rgba(168, 196, 180,0.95)',
+              margin: 0,
+              whiteSpace: 'nowrap',
+            }}
           >
-            Est. Generations Past
-          </span>
-          <span className="gold-rule" />
+            A Family Legacy
+          </p>
+          <span
+            aria-hidden="true"
+            style={{
+              display: 'block',
+              width: 28,
+              height: 1,
+              background: 'linear-gradient(90deg, rgba(168, 196, 180,0.85), transparent)',
+            }}
+          />
         </motion.div>
 
-        {/* Main title */}
         <motion.h1
           variants={fadeUp}
           initial="hidden"
@@ -258,28 +166,19 @@ export default function HeroSection() {
           custom={1}
           style={{
             fontFamily: 'var(--font-cormorant)',
-            fontSize: 'clamp(3.2rem, 9vw, 8rem)',
+            fontSize: 'clamp(2.65rem, 12vw, 7.2rem)',
             fontWeight: 300,
-            color: '#1A1008',
-            letterSpacing: '-0.01em',
-            lineHeight: 1.05,
+            color: '#FFFFFF',
+            letterSpacing: '-0.015em',
+            lineHeight: 1.02,
+            textShadow: '0 4px 40px rgba(0,0,0,0.28)',
+            maxWidth: '16ch',
           }}
         >
           Perinba{' '}
-          <em
-            style={{
-              fontStyle: 'italic',
-              background: 'linear-gradient(135deg, #C49B1A 0%, #D4AF37 50%, #E8CA60 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Vilas
-          </em>
+          <em style={{ fontStyle: 'italic', color: '#A8C4B4', fontWeight: 300 }}>Vilas</em>
         </motion.h1>
 
-        {/* Tagline */}
         <motion.p
           variants={fadeUp}
           initial="hidden"
@@ -287,79 +186,76 @@ export default function HeroSection() {
           custom={2}
           style={{
             fontFamily: 'var(--font-inter)',
-            fontSize: 'clamp(0.9rem, 2vw, 1.15rem)',
-            color: 'rgba(26,16,8,0.55)',
-            maxWidth: 480,
-            lineHeight: 1.75,
-            marginTop: '1.5rem',
-            marginBottom: '3rem',
+            fontSize: 'clamp(0.65rem, 2.2vw, 0.88rem)',
+            color: 'rgba(255,247,237,0.82)',
+            letterSpacing: 'clamp(0.12em, 1.5vw, 0.28em)',
+            textTransform: 'uppercase',
+            maxWidth: 'min(480px, 92vw)',
+            lineHeight: 1.7,
+            marginTop: 'clamp(1rem, 3vw, 1.4rem)',
+            marginBottom: 'clamp(1.75rem, 5vw, 2.75rem)',
+            paddingInline: '0.25rem',
           }}
         >
-          A legacy carried through generations with unity, warmth, and tradition.
+          Generations · Heritage · Home
         </motion.p>
 
-        {/* CTAs */}
         <motion.div
-          className="flex flex-col sm:flex-row gap-4 items-center"
           variants={fadeUp}
           initial="hidden"
           animate="visible"
           custom={3}
         >
-          <motion.a
-            href="#legacy"
-            className="inline-flex items-center gap-3 px-8 py-3.5 text-sm tracking-widest uppercase"
+          <Link
+            href="/login"
+            className="inline-flex items-center uppercase transition-all duration-300"
             style={{
               fontFamily: 'var(--font-inter)',
-              background: 'rgba(26,16,8,0.88)',
+              fontSize: 'clamp(0.62rem, 2vw, 0.7rem)',
+              letterSpacing: '0.2em',
+              border: '1px solid rgba(255,247,237,0.88)',
               color: '#FFF7ED',
-              letterSpacing: '0.12em',
-              backdropFilter: 'blur(8px)',
+              background: 'transparent',
+              padding: '0.85rem 1.75rem',
+              minHeight: 44,
             }}
-            whileHover={{ scale: 1.03, background: 'rgba(26,16,8,1)' }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ duration: 0.2 }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,247,237,0.1)';
+              e.currentTarget.style.borderColor = '#A8C4B4';
+              e.currentTarget.style.color = '#A8C4B4';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'rgba(255,247,237,0.88)';
+              e.currentTarget.style.color = '#FFF7ED';
+            }}
           >
-            Explore Legacy
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M1 7h12M8 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </motion.a>
-
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 px-8 py-3.5 text-sm tracking-widest uppercase"
-              style={{
-                fontFamily: 'var(--font-inter)',
-                border: '1px solid rgba(196,155,26,0.55)',
-                color: '#C49B1A',
-                letterSpacing: '0.12em',
-                backdropFilter: 'blur(8px)',
-                background: 'rgba(255,255,255,0.38)',
-              }}
-            >
-              Member Login
-            </Link>
-          </motion.div>
+            Enter Portal
+          </Link>
         </motion.div>
 
-        {/* Scroll hint */}
         <motion.div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+          className="absolute left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
+          style={{ bottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 2.2, duration: 1 }}
+          transition={{ delay: 1.9, duration: 0.9 }}
           aria-hidden="true"
         >
-          <span className="text-[10px] tracking-[0.4em] uppercase" style={{ color: 'rgba(26,16,8,0.3)' }}>
+          <span
+            className="text-[9px] uppercase tracking-[0.42em]"
+            style={{ color: 'rgba(255,247,237,0.5)' }}
+          >
             Scroll
           </span>
           <motion.div
-            className="w-px bg-gradient-to-b from-transparent"
-            style={{ height: 40, background: 'linear-gradient(to bottom, rgba(196,155,26,0), rgba(196,155,26,0.5))' }}
-            animate={{ scaleY: [0.4, 1, 0.4] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-px"
+            style={{
+              height: 28,
+              background: 'linear-gradient(to bottom, rgba(168, 196, 180,0), rgba(168, 196, 180,0.75))',
+            }}
+            animate={{ scaleY: [0.45, 1, 0.45] }}
+            transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut' }}
           />
         </motion.div>
       </div>

@@ -1,0 +1,4 @@
+email,name,password,role,code
+member1@example.com,Anita Perinbam,TempPass123,member,1/2
+member2@example.com,David Kumar,TempPass123,member,1/3
+admin.helper@example.com,Sarah Admin,TempPass123,admin,

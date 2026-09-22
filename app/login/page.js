@@ -12,7 +12,7 @@ export default function LoginPage() {
       {/* Header */}
       <div className="text-center mb-8">
         <Link href="/" style={{ textDecoration: 'none', display: 'block', marginBottom: '0.5rem' }}>
-          <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.8rem', fontWeight: 400, color: '#C49B1A' }}>
+          <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.8rem', fontWeight: 400, color: '#0F2A1F' }}>
             Perinba Vilas
           </span>
         </Link>

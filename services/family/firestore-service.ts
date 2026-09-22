@@ -199,7 +199,34 @@ export async function getRecordByCode(code: string): Promise<FamilyRecord | null
   try {
     const docId = sanitizeDocId(code);
     const doc = await adminDb.collection(COLLECTION_NAME).doc(docId).get();
-    return recordToFamilyRecord(doc);
+    const record = recordToFamilyRecord(doc);
+    if (!record) return null;
+
+    if (!record.children?.length) return record;
+
+    const hydratedChildren = await Promise.all(
+      record.children.map(async (child) => {
+        if (!child.code) return child;
+        try {
+          const childDoc = await adminDb
+            .collection(COLLECTION_NAME)
+            .doc(sanitizeDocId(child.code))
+            .get();
+          const childRecord = recordToFamilyRecord(childDoc);
+          if (!childRecord) return child;
+          return {
+            ...child,
+            name: child.name || childRecord.name || '',
+            dob: child.dob || childRecord.dob || null,
+            dod: child.dod || childRecord.dod || null,
+          };
+        } catch {
+          return child;
+        }
+      })
+    );
+
+    return { ...record, children: hydratedChildren };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`Failed to get record ${code}:`, message);
@@ -343,7 +370,7 @@ export async function updateRecord(code: string, updates: Partial<FamilyMember>)
       : existing.children,
     spouse: spouseFields.spouse,
     spouses: spouseFields.spouses,
-    photos: updates.photos || existing.photos,
+    photos: updates.photos !== undefined ? updates.photos : existing.photos,
     _editedAt: new Date().toISOString(),
   } as FamilyRecord;
 

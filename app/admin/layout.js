@@ -12,6 +12,7 @@ const NAV = [
   { label: 'Family',        href: '/admin/family',         icon: '◈' },
   { label: 'Requests',      href: '/admin/requests',       icon: '◎' },
   { label: 'Users',         href: '/admin/users',          icon: '◉' },
+  { label: 'Audit Logs',    href: '/admin/audit',          icon: '▤' },
   { label: 'Gallery',       href: '/admin/gallery',        icon: '▣' },
   { label: 'Events',        href: '/admin/events',         icon: '◷' },
   { label: 'Announcements', href: '/admin/announcements',  icon: '◎' },
@@ -40,7 +41,7 @@ export default function AdminLayout({ children }) {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF8F0' }}>
-      <div style={{ width: 36, height: 36, borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.2)', borderTopColor: '#C49B1A', animation: 'spin 1s linear infinite' }} />
+      <div style={{ width: 36, height: 36, borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.2)', borderTopColor: '#0F2A1F', animation: 'spin 1s linear infinite' }} />
     </div>
   );
 
@@ -50,9 +51,9 @@ export default function AdminLayout({ children }) {
     <>
       <div style={{ padding: '0 1.5rem 2rem' }}>
         <Link href="/" style={{ textDecoration: 'none' }} onClick={() => setMobileOpen(false)}>
-          <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.3rem', color: '#C49B1A' }}>Perinba Vilas</span>
+          <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.3rem', color: '#0F2A1F' }}>Perinba Vilas</span>
         </Link>
-        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.6rem', color: 'rgba(196,155,26,0.55)', letterSpacing: '0.3em', textTransform: 'uppercase', marginTop: '0.2rem' }}>
+        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.6rem', color: 'rgba(15, 42, 31,0.55)', letterSpacing: '0.3em', textTransform: 'uppercase', marginTop: '0.2rem' }}>
           Admin Panel
         </p>
       </div>
@@ -67,9 +68,9 @@ export default function AdminLayout({ children }) {
               className="flex items-center gap-3 px-4 py-2.5 text-sm"
               style={{
                 fontFamily: 'var(--font-inter)', textDecoration: 'none',
-                borderLeft: active ? '2px solid #C49B1A' : '2px solid transparent',
-                background: active ? 'rgba(196,155,26,0.07)' : 'transparent',
-                color: active ? '#C49B1A' : 'rgba(26,16,8,0.55)',
+                borderLeft: active ? '2px solid #0F2A1F' : '2px solid transparent',
+                background: active ? 'rgba(15, 42, 31,0.07)' : 'transparent',
+                color: active ? '#0F2A1F' : 'rgba(26,16,8,0.55)',
                 fontSize: '0.825rem',
               }}
             >
@@ -86,7 +87,7 @@ export default function AdminLayout({ children }) {
         </Link>
       </nav>
 
-      <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(212,175,55,0.12)', marginTop: 'auto' }}>
+      <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(26, 61, 46,0.12)', marginTop: 'auto' }}>
         <button
           onClick={handleSignOut}
           style={{ fontFamily: 'var(--font-inter)', fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,16,8,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
@@ -103,9 +104,9 @@ export default function AdminLayout({ children }) {
     <div className="min-h-screen flex" style={{ background: '#FFF8F0' }}>
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3"
-        style={{ background: 'rgba(255,251,245,0.98)', borderBottom: '1px solid rgba(212,175,55,0.18)' }}>
+        style={{ background: 'rgba(255,251,245,0.98)', borderBottom: '1px solid rgba(26, 61, 46,0.18)' }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
-          <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.1rem', color: '#C49B1A' }}>Perinba Vilas</span>
+          <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.1rem', color: '#0F2A1F' }}>Perinba Vilas</span>
         </Link>
         <button onClick={() => setMobileOpen(true)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#1A1008', padding: '0.25rem', lineHeight: 1 }}>
@@ -119,7 +120,7 @@ export default function AdminLayout({ children }) {
           width: 240,
           minHeight: '100vh',
           background: 'rgba(255,251,245,0.98)',
-          borderRight: '1px solid rgba(212,175,55,0.18)',
+          borderRight: '1px solid rgba(26, 61, 46,0.18)',
           padding: '2rem 0',
           position: 'sticky', top: 0,
           height: '100vh', overflowY: 'auto',
@@ -147,7 +148,7 @@ export default function AdminLayout({ children }) {
         style={{
           width: 260,
           background: 'rgba(255,251,245,0.98)',
-          borderRight: '1px solid rgba(212,175,55,0.18)',
+          borderRight: '1px solid rgba(26, 61, 46,0.18)',
           padding: '2rem 0',
           overflowY: 'auto',
           transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',

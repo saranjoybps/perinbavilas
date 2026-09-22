@@ -2,14 +2,18 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import CloudLayer from '@/components/clouds/CloudLayer';
 import { useWelcomeGate } from '@/context/WelcomeGateContext';
+
+const HERO_VIDEO =
+  'https://res.cloudinary.com/bsaqrrl4/video/upload/q_auto:eco/v1790068368/11904662_1280_720_60fps_nhnbbv.mp4';
+const HERO_POSTER =
+  'https://res.cloudinary.com/bsaqrrl4/video/upload/so_2,w_1600,q_auto,f_jpg/v1790068368/11904662_1280_720_60fps_nhnbbv.jpg';
 
 export default function LoadingScreen() {
   const { ready, active: welcomeActive } = useWelcomeGate();
   const skipAfterWelcome = useRef(false);
   const [visible, setVisible] = useState(true);
-  const [phase,   setPhase]   = useState('init'); // init | reveal | done
+  const [phase, setPhase] = useState('init'); // init | reveal | done
 
   useEffect(() => {
     if (!ready) {
@@ -28,9 +32,13 @@ export default function LoadingScreen() {
     setVisible(true);
     setPhase('init');
     const t1 = setTimeout(() => setPhase('reveal'), 500);
-    const t2 = setTimeout(() => setPhase('done'),  2600);
+    const t2 = setTimeout(() => setPhase('done'), 2600);
     const t3 = setTimeout(() => setVisible(false), 3200);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [ready, welcomeActive]);
 
   return (
@@ -39,31 +47,38 @@ export default function LoadingScreen() {
         <motion.div
           key="loader"
           className="fixed inset-0 z-[200] flex flex-col items-center justify-center overflow-hidden"
-          style={{ background: 'linear-gradient(180deg, #B8DFF8 0%, #D8F0FB 30%, #F4FAFE 60%, #FFF7ED 100%)' }}
+          style={{ background: '#0F2A1F' }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.9, ease: 'easeInOut' }}
         >
-          {/* Cloud layers */}
-          <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-            <CloudLayer depth="far" />
-            <CloudLayer depth="mid" />
-          </div>
+          <video
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ zIndex: 0, pointerEvents: 'none' }}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster={HERO_POSTER}
+            aria-hidden="true"
+          >
+            <source src={HERO_VIDEO} type="video/mp4" />
+          </video>
 
-          {/* Sunlight */}
           <div
-            className="absolute pointer-events-none"
+            className="absolute inset-0 pointer-events-none"
             style={{
-              top: '-5%', right: '12%',
-              width: 480, height: 480,
-              background: 'radial-gradient(ellipse 65% 55% at 55% 40%, rgba(255,224,80,0.2) 0%, transparent 68%)',
-              filter: 'blur(36px)',
+              zIndex: 1,
+              background:
+                'linear-gradient(180deg, rgba(10,28,20,0.72) 0%, rgba(10,28,20,0.45) 45%, rgba(10,28,20,0.7) 100%)',
             }}
             aria-hidden="true"
           />
 
-          {/* Content */}
-          <div className="relative z-10 flex flex-col items-center gap-6" style={{ zIndex: 1 }}>
-            {/* Spinner */}
+          <div
+            className="relative flex flex-col items-center gap-6"
+            style={{ zIndex: 2 }}
+          >
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
@@ -71,12 +86,11 @@ export default function LoadingScreen() {
                 width: 44,
                 height: 44,
                 borderRadius: '50%',
-                border: '1.5px solid rgba(196,155,26,0.18)',
-                borderTopColor: '#C49B1A',
+                border: '1.5px solid rgba(168, 196, 180,0.22)',
+                borderTopColor: '#A8C4B4',
               }}
             />
 
-            {/* Text reveal */}
             <AnimatePresence>
               {phase !== 'init' && (
                 <motion.div
@@ -92,7 +106,7 @@ export default function LoadingScreen() {
                       fontSize: '0.65rem',
                       letterSpacing: '0.48em',
                       textTransform: 'uppercase',
-                      color: 'rgba(196,155,26,0.7)',
+                      color: 'rgba(168, 196, 180,0.85)',
                     }}
                   >
                     Welcome to
@@ -102,13 +116,25 @@ export default function LoadingScreen() {
                       fontFamily: 'var(--font-cormorant)',
                       fontSize: '2.6rem',
                       fontWeight: 300,
-                      color: '#1A1008',
+                      color: '#FFF7ED',
                       letterSpacing: '0.04em',
                     }}
                   >
-                    Perinba Vilas
+                    Perinba{' '}
+                    <em style={{ fontStyle: 'italic', color: '#A8C4B4', fontWeight: 300 }}>
+                      Vilas
+                    </em>
                   </h1>
-                  <span className="gold-rule" />
+                  <span
+                    style={{
+                      display: 'block',
+                      width: 48,
+                      height: 1,
+                      marginTop: 8,
+                      background:
+                        'linear-gradient(90deg, transparent, rgba(168, 196, 180,0.85), transparent)',
+                    }}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

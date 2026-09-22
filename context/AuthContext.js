@@ -6,7 +6,12 @@ import { getAuth } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 
 const DEFAULT_ROLE = 'member';
-const PRIVILEGED_ROLES = ['admin', 'super_admin'];
+const ADMIN_ROLES = ['admin', 'super_admin']; // super_admin kept only for legacy accounts
+
+function normalizeRole(role) {
+  if (ADMIN_ROLES.includes(role)) return 'admin';
+  return DEFAULT_ROLE;
+}
 
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -44,12 +49,10 @@ export default function AuthProvider({ children }) {
           const res = await fetch(`/api/users/${firebaseUser.uid}`);
           if (res.ok) {
             const data = await res.json();
-            const normalizedRole = PRIVILEGED_ROLES.includes(data.role) || data.role === 'member'
-              ? data.role
-              : DEFAULT_ROLE;
+            const normalizedRole = normalizeRole(data.role);
             setUserData({ ...data, role: normalizedRole });
             setRole(normalizedRole);
-            setIsAdmin(PRIVILEGED_ROLES.includes(normalizedRole));
+            setIsAdmin(normalizedRole === 'admin');
           } else {
             console.warn('Auth: Failed to fetch user role', res.status, await res.text().catch(() => ''));
           }

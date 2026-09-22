@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
  * FloatingParticles — subtle light dust / bokeh particles floating upward.
  * Rendered on a canvas for zero DOM overhead.
  */
-export default function FloatingParticles({ count = 28, color = 'rgba(212,175,55,0.22)' }) {
+export default function FloatingParticles({ count = 28, color = 'rgba(26, 61, 46,0.22)' }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {

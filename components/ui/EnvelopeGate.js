@@ -46,7 +46,7 @@ function EnvelopeArt({ opening }) {
 
         <rect x="8" y="58" width="364" height="174" rx="6" fill="url(#envPaper)" filter="url(#envShadow)" />
         <path d="M8 70 L190 168 L372 70 L372 232 Q372 232 366 232 L14 232 Q8 232 8 232 Z" fill="url(#envPocket)" />
-        <path d="M8 70 L190 168 L372 70" fill="none" stroke="rgba(196,155,26,0.28)" strokeWidth="1.2" />
+        <path d="M8 70 L190 168 L372 70" fill="none" stroke="rgba(15, 42, 31,0.28)" strokeWidth="1.2" />
       </svg>
 
       <div className="envelope-flap-wrap">
@@ -57,7 +57,7 @@ function EnvelopeArt({ opening }) {
               <stop offset="100%" stopColor="#E8D0A4" />
             </linearGradient>
           </defs>
-          <path d="M8 8 L372 8 L190 122 Z" fill="url(#envFlap)" stroke="rgba(196,155,26,0.22)" strokeWidth="1" />
+          <path d="M8 8 L372 8 L190 122 Z" fill="url(#envFlap)" stroke="rgba(15, 42, 31,0.22)" strokeWidth="1" />
         </svg>
       </div>
 
@@ -72,9 +72,9 @@ function EnvelopeArt({ opening }) {
         <svg viewBox="0 0 72 72" width="72" height="72">
           <defs>
             <radialGradient id="sealGold" cx="38%" cy="32%" r="70%">
-              <stop offset="0%" stopColor="#F0D878" />
-              <stop offset="45%" stopColor="#D4AF37" />
-              <stop offset="100%" stopColor="#8A6A10" />
+              <stop offset="0%" stopColor="#C5D9CE" />
+              <stop offset="45%" stopColor="#1A3D2E" />
+              <stop offset="100%" stopColor="#0A1C14" />
             </radialGradient>
           </defs>
           <circle cx="36" cy="36" r="34" fill="url(#sealGold)" />
@@ -83,7 +83,7 @@ function EnvelopeArt({ opening }) {
             x="36"
             y="43"
             textAnchor="middle"
-            fill="#5C4308"
+            fill="#FFFFFF"
             style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: 20, fontWeight: 500 }}
           >
             PV
@@ -160,7 +160,7 @@ export default function EnvelopeGate() {
               right: '12%',
               width: 420,
               height: 420,
-              background: 'radial-gradient(ellipse 65% 55% at 55% 40%, rgba(255,224,80,0.28) 0%, transparent 68%)',
+              background: 'radial-gradient(ellipse 65% 55% at 55% 40%, rgba(168, 196, 180,0.28) 0%, transparent 68%)',
               filter: 'blur(28px)',
               animation: 'sunPulse 8s ease-in-out infinite',
             }}
@@ -178,7 +178,7 @@ export default function EnvelopeGate() {
                   fontSize: '0.65rem',
                   letterSpacing: '0.46em',
                   textTransform: 'uppercase',
-                  color: '#C49B1A',
+                  color: '#0F2A1F',
                   marginBottom: '1.75rem',
                 }}
               >

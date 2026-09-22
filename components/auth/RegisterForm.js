@@ -31,7 +31,7 @@ export default function RegisterForm() {
   const inputStyle = {
     width: '100%',
     background: 'rgba(255,255,255,0.58)',
-    border: '1px solid rgba(212,175,55,0.22)',
+    border: '1px solid rgba(26, 61, 46,0.22)',
     padding: '0.8rem 1rem',
     fontFamily: 'var(--font-inter)',
     fontSize: '0.875rem',
@@ -65,8 +65,8 @@ export default function RegisterForm() {
             onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
             placeholder={f.placeholder}
             style={inputStyle}
-            onFocus={(e) => (e.target.style.borderColor = '#C49B1A')}
-            onBlur={(e)  => (e.target.style.borderColor = 'rgba(212,175,55,0.22)')}
+            onFocus={(e) => (e.target.style.borderColor = '#0F2A1F')}
+            onBlur={(e)  => (e.target.style.borderColor = 'rgba(26, 61, 46,0.22)')}
           />
         </div>
       ))}
@@ -91,7 +91,7 @@ export default function RegisterForm() {
 
       <p style={{ textAlign: 'center', fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: 'rgba(26,16,8,0.45)' }}>
         Already have an account?{' '}
-        <Link href="/login" style={{ color: '#C49B1A', textDecoration: 'none' }}>Sign in</Link>
+        <Link href="/login" style={{ color: '#0F2A1F', textDecoration: 'none' }}>Sign in</Link>
       </p>
     </form>
   );

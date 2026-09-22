@@ -1,54 +1,68 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import CloudLayer from '@/components/clouds/CloudLayer';
 
 gsap.registerPlugin(ScrollTrigger);
 
+const LEGACY_VIDEO =
+  'https://res.cloudinary.com/bsaqrrl4/video/upload/q_auto:eco,w_1920/v1790077273/7316616-uhd_3840_2160_25fps_hefohj.mp4';
+const LEGACY_POSTER =
+  'https://res.cloudinary.com/bsaqrrl4/video/upload/so_2,w_1600,q_auto,f_jpg/v1790077273/7316616-uhd_3840_2160_25fps_hefohj.jpg';
+
 const QUOTE = 'More than a name, Perinba Vilas is a legacy carried forward with love and togetherness.';
 const QUOTE_WORDS = QUOTE.split(' ');
-const GOLD_WORDS  = new Set(['Perinba', 'Vilas']);
+const ACCENT_WORDS = new Set(['Perinba', 'Vilas']);
 
-const goldStyle = {
-  background: 'linear-gradient(90deg, #C49B1A, #D4AF37)',
-  WebkitBackgroundClip: 'text',
-  backgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
+const accentStyle = {
+  color: '#A8C4B4',
   fontWeight: 500,
 };
 
 export default function LegacyStatement() {
   const sectionRef = useRef(null);
-  const glowRef    = useRef(null);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.playsInline = true;
+    const tryPlay = () => {
+      video.play().catch(() => {});
+    };
+    tryPlay();
+    video.addEventListener('loadeddata', tryPlay);
+    document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
+    return () => {
+      video.removeEventListener('loadeddata', tryPlay);
+      document.removeEventListener('touchstart', tryPlay);
+    };
+  }, []);
 
   useGSAP(() => {
     const words = sectionRef.current.querySelectorAll('.word-token');
 
-    const tl = gsap.timeline({
+    gsap.timeline({
       scrollTrigger: {
-        trigger:      sectionRef.current,
-        start:        'top top',
-        end:          '+=1000',
-        scrub:        1.5,
-        pin:          true,
-        pinSpacing:   true,
+        trigger: sectionRef.current,
+        start: 'top top',
+        end: '+=1000',
+        scrub: 1.5,
+        pin: true,
+        pinSpacing: true,
         anticipatePin: 1,
       },
-    });
-
-    tl.from(glowRef.current, { scale: 0.6, opacity: 0, duration: 0.25 }, 0);
-
-    tl.from(words, {
-      opacity:  0,
-      y:        32,
-      filter:   'blur(8px)',
-      stagger:  { each: 0.062 },
+    }).from(words, {
+      opacity: 0,
+      y: 32,
+      filter: 'blur(8px)',
+      stagger: { each: 0.062 },
       duration: 0.4,
-      ease:     'power3.out',
-    }, 0.1);
+      ease: 'power3.out',
+    }, 0.05);
   }, { scope: sectionRef });
 
   return (
@@ -57,41 +71,46 @@ export default function LegacyStatement() {
       id="legacy"
       className="relative overflow-hidden flex items-center justify-center"
       style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(180deg, #FFF7ED 0%, #FFF5E4 50%, #FFFBF7 100%)',
+        minHeight: '100svh',
+        background: '#0F2A1F',
       }}
     >
-      {/* Cloud layers behind text */}
-      <div className="absolute inset-0 pointer-events-none opacity-28" aria-hidden="true">
-        <CloudLayer depth="far" />
-      </div>
+      <video
+        ref={videoRef}
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{ zIndex: 0, pointerEvents: 'none' }}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        poster={LEGACY_POSTER}
+        aria-hidden="true"
+      >
+        <source src={LEGACY_VIDEO} type="video/mp4" />
+      </video>
 
-      {/* Sunlight glow */}
       <div
-        ref={glowRef}
-        className="absolute pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          top: '5%', right: '15%',
-          width: 500, height: 500,
-          background: 'radial-gradient(ellipse 60% 55% at 55% 38%, rgba(255,215,80,0.18) 0%, rgba(255,190,40,0.08) 45%, transparent 70%)',
-          filter: 'blur(48px)',
+          zIndex: 1,
+          background:
+            'linear-gradient(180deg, rgba(10,28,20,0.72) 0%, rgba(10,28,20,0.55) 45%, rgba(10,28,20,0.78) 100%)',
         }}
         aria-hidden="true"
       />
 
-      {/* Content */}
       <div
         className="relative text-center px-6 max-w-3xl mx-auto"
-        style={{ zIndex: 1 }}
+        style={{ zIndex: 2 }}
       >
-        {/* Opening mark */}
         <span
           style={{
-            fontFamily:   'var(--font-cormorant)',
-            fontSize:     '5rem',
-            lineHeight:   0.8,
-            color:        'rgba(212,175,55,0.3)',
-            display:      'block',
+            fontFamily: 'var(--font-cormorant)',
+            fontSize: '5rem',
+            lineHeight: 0.8,
+            color: 'rgba(168,196,180,0.35)',
+            display: 'block',
             marginBottom: '1.5rem',
           }}
           aria-hidden="true"
@@ -101,23 +120,24 @@ export default function LegacyStatement() {
 
         <blockquote
           style={{
-            fontFamily:   'var(--font-cormorant)',
-            fontSize:     'clamp(1.35rem, 4vw, 3rem)',
-            fontWeight:   300,
-            fontStyle:    'italic',
-            color:        '#1A1008',
-            lineHeight:   1.6,
+            fontFamily: 'var(--font-cormorant)',
+            fontSize: 'clamp(1.35rem, 4vw, 3rem)',
+            fontWeight: 300,
+            fontStyle: 'italic',
+            color: '#FFF7ED',
+            lineHeight: 1.6,
             marginBottom: '2.5rem',
+            textShadow: '0 2px 28px rgba(0,0,0,0.35)',
           }}
         >
           {QUOTE_WORDS.map((word, i) => {
-            const bare   = word.replace(/[.,!?]/g, '');
-            const isGold = GOLD_WORDS.has(bare);
+            const bare = word.replace(/[.,!?]/g, '');
+            const isAccent = ACCENT_WORDS.has(bare);
             return (
               <span
                 key={i}
                 className="word-token"
-                style={{ marginRight: '0.3em', ...(isGold ? goldStyle : {}) }}
+                style={{ marginRight: '0.3em', ...(isAccent ? accentStyle : {}) }}
               >
                 {word}
               </span>
@@ -125,16 +145,22 @@ export default function LegacyStatement() {
           })}
         </blockquote>
 
-        {/* Gold rule + attribution */}
         <div className="flex flex-col items-center gap-4">
-          <span className="gold-rule" />
           <span
             style={{
-              fontFamily:    'var(--font-inter)',
-              fontSize:      '0.7rem',
+              display: 'block',
+              width: 56,
+              height: 1,
+              background: 'linear-gradient(90deg, transparent, rgba(168,196,180,0.85), transparent)',
+            }}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-inter)',
+              fontSize: '0.7rem',
               letterSpacing: '0.4em',
               textTransform: 'uppercase',
-              color:         'rgba(26,16,8,0.38)',
+              color: 'rgba(255,247,237,0.55)',
             }}
           >
             The Perinba Vilas Family

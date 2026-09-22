@@ -97,7 +97,7 @@ FAMILY_MODULE_LOG.md      # Family module architecture notes
 
 - Client data goes through `lib/api.js` → `/api/*` (not direct Firestore from the browser), except Firebase Auth.
 - API routes use `verifyAuth()` (`__auth_token` cookie or `Authorization: Bearer`).
-- Roles: `member` | `admin` | `super_admin`.
+- Roles: `member` | `admin` (legacy `super_admin` is treated as `admin`).
 - Two family-related Firestore collections:
   - `family_members` — portal member cards
   - `families` — hierarchical family directory (admin CRUD / PDF tooling)

@@ -3,9 +3,11 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { errorResponse, verifyAuth } from '@/lib/api-helpers';
 import { sendWelcomeEmail } from '@/lib/email';
 
-const ROLE_OPTIONS = ['member', 'admin', 'super_admin'];
+const ROLE_OPTIONS = ['member', 'admin'];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function normalizeRole(role) {
+  if (role === 'super_admin') return 'admin'; // legacy → admin
   return ROLE_OPTIONS.includes(role) ? role : 'member';
 }
 
@@ -30,6 +32,33 @@ function buildUserData({ uid, email, displayName, role, code }) {
   return data;
 }
 
+function mapCreateError(err, email) {
+  const code = err?.code || '';
+  const message = err?.message || 'Failed to create user';
+
+  if (code === 'auth/email-already-exists' || /already exists|already in use/i.test(message)) {
+    return 'Email already registered — duplicate import rejected';
+  }
+  if (code === 'auth/invalid-email') {
+    return 'Invalid email format';
+  }
+  if (code === 'auth/invalid-password' || /password/i.test(message)) {
+    return 'Password does not meet Firebase requirements (min 6 characters)';
+  }
+  return message;
+}
+
+async function emailAlreadyExists(email) {
+  try {
+    await adminAuth.getUserByEmail(email);
+    return true;
+  } catch (err) {
+    if (err?.code === 'auth/user-not-found') return false;
+    // If lookup fails for another reason, fall through and let createUser decide.
+    return false;
+  }
+}
+
 export async function POST(request) {
   try {
     const decoded = await verifyAuth(request);
@@ -47,6 +76,7 @@ export async function POST(request) {
     }
 
     const results = { created: 0, failed: 0, errors: [] };
+    const seenEmails = new Set();
 
     for (const entry of users) {
       const cleanEmail = String(entry.email || '').trim().toLowerCase();
@@ -57,12 +87,41 @@ export async function POST(request) {
 
       if (!cleanEmail || !cleanName || !cleanPassword) {
         results.failed++;
-        results.errors.push({ email: cleanEmail || '(missing)', error: 'email, name, and temporary password are required' });
+        results.errors.push({
+          email: cleanEmail || '(missing)',
+          error: 'email, name, and temporary password are required',
+        });
         continue;
       }
+
+      if (!EMAIL_RE.test(cleanEmail)) {
+        results.failed++;
+        results.errors.push({ email: cleanEmail, error: 'Invalid email format' });
+        continue;
+      }
+
       if (cleanPassword.length < 6) {
         results.failed++;
         results.errors.push({ email: cleanEmail, error: 'Password must be at least 6 characters' });
+        continue;
+      }
+
+      if (seenEmails.has(cleanEmail)) {
+        results.failed++;
+        results.errors.push({
+          email: cleanEmail,
+          error: 'Duplicate email in import file — skipped',
+        });
+        continue;
+      }
+      seenEmails.add(cleanEmail);
+
+      if (await emailAlreadyExists(cleanEmail)) {
+        results.failed++;
+        results.errors.push({
+          email: cleanEmail,
+          error: 'Email already registered — duplicate import rejected',
+        });
         continue;
       }
 
@@ -115,7 +174,7 @@ export async function POST(request) {
         results.created++;
       } catch (err) {
         results.failed++;
-        results.errors.push({ email: cleanEmail, error: err.message || 'Failed to create user' });
+        results.errors.push({ email: cleanEmail, error: mapCreateError(err, cleanEmail) });
       }
     }
 

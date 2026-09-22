@@ -21,7 +21,7 @@ export default function ConfirmModal({ open, title, message, onConfirm, onCancel
         <div className="flex gap-3 justify-end">
           <button onClick={onCancel} disabled={loading}
             className="px-5 py-2 text-xs tracking-widest uppercase"
-            style={{ fontFamily: 'var(--font-inter)', border: '1px solid rgba(212,175,55,0.3)', color: 'rgba(26,16,8,0.4)', background: 'transparent', cursor: loading ? 'wait' : 'pointer', letterSpacing: '0.12em' }}>
+            style={{ fontFamily: 'var(--font-inter)', border: '1px solid rgba(26, 61, 46,0.3)', color: 'rgba(26,16,8,0.4)', background: 'transparent', cursor: loading ? 'wait' : 'pointer', letterSpacing: '0.12em' }}>
             Cancel
           </button>
           <button onClick={onConfirm} disabled={loading}

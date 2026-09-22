@@ -64,7 +64,7 @@ export default function DashboardGalleryPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.2)', borderTopColor: '#C49B1A', animation: 'spin 1s linear infinite' }} />
+        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.2)', borderTopColor: '#0F2A1F', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
@@ -72,7 +72,7 @@ export default function DashboardGalleryPage() {
   return (
     <>
       <div className="mb-8">
-        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.4rem' }}>Portal</p>
+        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(15, 42, 31,0.65)', marginBottom: '0.4rem' }}>Portal</p>
         <h1 style={{ fontFamily: 'var(--font-cormorant)', fontSize: 'clamp(1.5rem, 4.5vw, 2rem)', fontWeight: 300, color: '#1A1008' }}>Gallery</h1>
         <span className="gold-rule block mt-3" />
       </div>
@@ -92,7 +92,7 @@ export default function DashboardGalleryPage() {
             </label>
             <input
               type="file" accept="image/*" ref={fileRef} required
-              style={{ width: '100%', fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: '#1A1008', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(212,175,55,0.22)', padding: '0.6rem 0.8rem' }}
+              style={{ width: '100%', fontFamily: 'var(--font-inter)', fontSize: '0.8rem', color: '#1A1008', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(26, 61, 46,0.22)', padding: '0.6rem 0.8rem' }}
             />
           </div>
           <div>
@@ -100,17 +100,17 @@ export default function DashboardGalleryPage() {
               Caption
             </label>
             <input type="text" value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Add a caption…"
-              style={{ width: '100%', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(212,175,55,0.22)', padding: '0.7rem 1rem', fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: '#1A1008', outline: 'none' }}
-              onFocus={(e) => (e.target.style.borderColor = '#C49B1A')}
-              onBlur={(e) => (e.target.style.borderColor = 'rgba(212,175,55,0.22)')}
+              style={{ width: '100%', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(26, 61, 46,0.22)', padding: '0.7rem 1rem', fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: '#1A1008', outline: 'none' }}
+              onFocus={(e) => (e.target.style.borderColor = '#0F2A1F')}
+              onBlur={(e) => (e.target.style.borderColor = 'rgba(26, 61, 46,0.22)')}
             />
           </div>
           <motion.button type="submit" disabled={uploading}
             className="px-7 py-3 text-xs tracking-widest uppercase"
-            style={{ fontFamily: 'var(--font-inter)', border: '1px solid rgba(196,155,26,0.45)', color: '#C49B1A', background: 'transparent', cursor: uploading ? 'wait' : 'pointer', opacity: uploading ? 0.7 : 1, letterSpacing: '0.14em', transition: 'all 0.2s' }}
+            style={{ fontFamily: 'var(--font-inter)', border: '1px solid rgba(15, 42, 31,0.45)', color: '#0F2A1F', background: 'transparent', cursor: uploading ? 'wait' : 'pointer', opacity: uploading ? 0.7 : 1, letterSpacing: '0.14em', transition: 'all 0.2s' }}
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-            onMouseEnter={(e) => { if (!uploading) { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; } }}
-            onMouseLeave={(e) => { if (!uploading) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; } }}
+            onMouseEnter={(e) => { if (!uploading) { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; } }}
+            onMouseLeave={(e) => { if (!uploading) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; } }}
           >
             {uploading ? 'Uploading…' : 'Submit for Approval'}
           </motion.button>
@@ -127,7 +127,7 @@ export default function DashboardGalleryPage() {
             {myUploads.map((item) => (
               <div key={item.id} className="relative overflow-hidden" style={{ aspectRatio: '1/1', background: '#EBF0F5' }}>
                 <Image src={item.url} alt={item.caption || 'Upload'} fill style={{ objectFit: 'cover' }} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
-                <div className="absolute top-2 right-2" style={{ fontFamily: 'var(--font-inter)', fontSize: '0.5rem', letterSpacing: '0.15em', textTransform: 'uppercase', padding: '0.2rem 0.5rem', background: item.status === 'approved' ? 'rgba(47,107,66,0.85)' : 'rgba(196,155,26,0.85)', color: '#FFF7ED', borderRadius: 2 }}>
+                <div className="absolute top-2 right-2" style={{ fontFamily: 'var(--font-inter)', fontSize: '0.5rem', letterSpacing: '0.15em', textTransform: 'uppercase', padding: '0.2rem 0.5rem', background: item.status === 'approved' ? 'rgba(47,107,66,0.85)' : 'rgba(15, 42, 31,0.85)', color: '#FFF7ED', borderRadius: 2 }}>
                   {item.status}
                 </div>
                 {item.caption && (
@@ -148,13 +148,13 @@ export default function DashboardGalleryPage() {
         </h2>
         {approved.length === 0 ? (
           <div className="glass-warm shadow-cloud p-10 text-center max-w-md">
-            <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.8rem', color: '#D4AF37', marginBottom: '0.75rem' }}>▣</p>
+            <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.8rem', color: '#1A3D2E', marginBottom: '0.75rem' }}>▣</p>
             <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: 'rgba(26,16,8,0.45)' }}>No approved photos yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
             {approved.map((item) => (
-              <div key={item.id} className="relative overflow-hidden" style={{ aspectRatio: '1/1', background: '#EBF0F5', borderTop: '2px solid rgba(212,175,55,0.2)' }}>
+              <div key={item.id} className="relative overflow-hidden" style={{ aspectRatio: '1/1', background: '#EBF0F5', borderTop: '2px solid rgba(26, 61, 46,0.2)' }}>
                 <Image src={item.url} alt={item.caption || 'Gallery photo'} fill style={{ objectFit: 'cover' }} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
                 {item.caption && (
                   <div className="absolute bottom-0 inset-x-0 p-2" style={{ background: 'linear-gradient(transparent, rgba(26,16,8,0.55))' }}>

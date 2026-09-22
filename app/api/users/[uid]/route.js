@@ -2,8 +2,13 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { serializeDoc, errorResponse, verifyAuth } from '@/lib/api-helpers';
 
-const ROLE_OPTIONS = ['member', 'admin', 'super_admin'];
-const ADMIN_ROLES = ['admin', 'super_admin'];
+const ROLE_OPTIONS = ['member', 'admin'];
+const ADMIN_ROLES = ['admin', 'super_admin']; // super_admin kept for legacy accounts
+
+function normalizeRole(role) {
+  if (role === 'super_admin') return 'admin';
+  return ROLE_OPTIONS.includes(role) ? role : 'member';
+}
 
 function statusFor(error) {
   if (error.message === 'Unauthorized') return 401;
@@ -21,9 +26,8 @@ async function requireAdmin(request) {
 }
 
 function canDelete(requesterRole, targetRole) {
-  if (requesterRole === 'super_admin') return true;
-  if (requesterRole === 'admin' && targetRole === 'member') return true;
-  return false;
+  if (!ADMIN_ROLES.includes(requesterRole)) return false;
+  return !ADMIN_ROLES.includes(targetRole);
 }
 
 export async function GET(_, { params }) {
@@ -41,26 +45,19 @@ export async function GET(_, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const requester = await requireAdmin(request);
+    await requireAdmin(request);
     const { uid } = await params;
     const body = await request.json();
     const updates = { ...body, updatedAt: new Date() };
     const batch = adminDb.batch();
 
     if (body.role) {
-      if (!ROLE_OPTIONS.includes(body.role)) {
-        return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-      }
-      if (body.role === 'super_admin') {
-        const requesterRole = requester.role || (await adminDb.collection('users').doc(requester.uid).get()).data()?.role;
-        if (requesterRole !== 'super_admin') {
-          return NextResponse.json({ error: 'Only super_admin can assign super_admin role' }, { status: 403 });
-        }
-      }
-      await adminAuth.setCustomUserClaims(uid, { role: body.role });
+      const role = normalizeRole(body.role);
+      updates.role = role;
+      await adminAuth.setCustomUserClaims(uid, { role });
       batch.set(adminDb.collection('authentication').doc(uid), {
         uid,
-        role: body.role,
+        role,
         updatedAt: new Date(),
       }, { merge: true });
     }

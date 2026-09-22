@@ -20,7 +20,7 @@ export default function FamilyPage() {
   return (
     <>
       <div className="mb-8">
-        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.4rem' }}>
+        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(15, 42, 31,0.65)', marginBottom: '0.4rem' }}>
           Portal
         </p>
         <h1 style={{ fontFamily: 'var(--font-cormorant)', fontSize: 'clamp(1.5rem, 4.5vw, 2rem)', fontWeight: 300, color: '#1A1008' }}>Family Members</h1>
@@ -29,19 +29,19 @@ export default function FamilyPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.2)', borderTopColor: '#C49B1A', animation: 'spin 1s linear infinite' }} />
+          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.2)', borderTopColor: '#0F2A1F', animation: 'spin 1s linear infinite' }} />
         </div>
       ) : members.length === 0 ? (
         <div className="glass-warm shadow-cloud p-10 text-center max-w-md">
-          <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.8rem', color: '#D4AF37', marginBottom: '0.75rem' }}>◇</p>
+          <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.8rem', color: '#1A3D2E', marginBottom: '0.75rem' }}>◇</p>
           <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: 'rgba(26,16,8,0.45)' }}>No family members added yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {members.map((m) => (
-            <div key={m.id} className="glass-warm shadow-cloud p-6" style={{ borderTop: '2px solid rgba(212,175,55,0.3)' }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(212,175,55,0.2) 0%, rgba(212,175,55,0.05) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.4rem', color: '#C49B1A' }}>
+            <div key={m.id} className="glass-warm shadow-cloud p-6" style={{ borderTop: '2px solid rgba(26, 61, 46,0.3)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(26, 61, 46,0.2) 0%, rgba(26, 61, 46,0.05) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.4rem', color: '#0F2A1F' }}>
                   {(m.name || m.displayName || '?')[0]}
                 </span>
               </div>

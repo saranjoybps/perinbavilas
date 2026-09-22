@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import SectionDecor from '@/components/ui/SectionDecor';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -52,7 +53,7 @@ function TimelineItem({ m, index }) {
         <div
           className="glass-warm shadow-cloud p-7 sm:p-9 max-w-md w-full mx-auto md:mx-0"
           style={{
-            borderLeft: '3px solid rgba(212,175,55,0.5)',
+            borderLeft: '3px solid rgba(26, 61, 46,0.5)',
             borderTop: '1px solid rgba(255,255,255,0.7)',
           }}
         >
@@ -62,7 +63,7 @@ function TimelineItem({ m, index }) {
               fontSize: '0.7rem',
               letterSpacing: '0.35em',
               textTransform: 'uppercase',
-              color: '#C49B1A',
+              color: '#0F2A1F',
               display: 'block',
               marginBottom: '0.6rem',
             }}
@@ -74,7 +75,7 @@ function TimelineItem({ m, index }) {
               fontFamily: 'var(--font-cormorant)',
               fontSize: '1.5rem',
               fontWeight: 500,
-              color: '#1A1008',
+              color: '#0F2A1F',
               marginBottom: '0.75rem',
             }}
           >
@@ -85,7 +86,7 @@ function TimelineItem({ m, index }) {
               fontFamily: 'var(--font-inter)',
               fontSize: '0.95rem',
               lineHeight: 1.8,
-              color: 'rgba(26,16,8,0.58)',
+              color: 'rgba(15,42,31,0.58)',
             }}
           >
             {m.desc}
@@ -102,8 +103,8 @@ function TimelineItem({ m, index }) {
             width: 14,
             height: 14,
             borderRadius: '50%',
-            background: '#D4AF37',
-            boxShadow: '0 0 0 6px rgba(212,175,55,0.18), 0 0 20px rgba(212,175,55,0.3)',
+            background: '#1A3D2E',
+            boxShadow: '0 0 0 6px rgba(26, 61, 46,0.18), 0 0 20px rgba(26, 61, 46,0.3)',
           }}
         />
       </div>
@@ -176,29 +177,31 @@ export default function TimelineSection() {
       id="timeline"
       className="relative overflow-hidden"
       style={{
-        background:    '#FFF8F0',
-        paddingTop:    '6.5rem',
-        paddingBottom: '7rem',
+        paddingTop: 'clamp(3.5rem, 8vw, 6.5rem)',
+        // Extra bottom room on phones so the floral sits clear of the last card
+        paddingBottom: 'clamp(10rem, 32vw, 11rem)',
       }}
     >
+      <SectionDecor position="bottom-left" />
+
       {/* Vertical timeline line — desktop only, drawn via GSAP scrub */}
       <div
         ref={lineRef}
         className="hidden md:block absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px pointer-events-none"
         style={{
-          background: 'linear-gradient(to bottom, transparent 5%, rgba(212,175,55,0.3) 20%, rgba(212,175,55,0.3) 80%, transparent 95%)',
+          background: 'linear-gradient(to bottom, transparent 5%, rgba(26, 61, 46,0.3) 20%, rgba(26, 61, 46,0.3) 80%, transparent 95%)',
           zIndex: 0,
         }}
         aria-hidden="true"
       />
 
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-12" style={{ zIndex: 1 }}>
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-12" style={{ zIndex: 1 }}>
         {/* Header */}
-        <div className="timeline-header text-center mb-16">
-          <div className="flex items-center justify-center gap-4 mb-5">
+        <div className="timeline-header mb-8 text-center sm:mb-12 md:mb-16">
+          <div className="mb-3 flex items-center justify-center gap-4 sm:mb-5">
             <span
               className="text-xs tracking-[0.4em] uppercase"
-              style={{ fontFamily: 'var(--font-inter)', color: '#C49B1A' }}
+              style={{ fontFamily: 'var(--font-inter)', color: '#0F2A1F' }}
             >
               Through Time
             </span>
@@ -209,16 +212,16 @@ export default function TimelineSection() {
               fontFamily: 'var(--font-cormorant)',
               fontSize: 'clamp(2.1rem, 4.5vw, 3.4rem)',
               fontWeight: 400,
-              color: '#1A1008',
+              color: '#0F2A1F',
             }}
           >
             Our{' '}
-            <em style={{ fontStyle: 'italic', color: '#C49B1A' }}>Journey</em>
+            <em style={{ fontStyle: 'italic', color: '#0F2A1F' }}>Journey</em>
           </h2>
         </div>
 
         {/* Timeline items */}
-        <div className="flex flex-col gap-10 md:gap-16">
+        <div className="flex flex-col gap-7 sm:gap-10 md:gap-16">
           {MILESTONES.map((m, i) => (
             <TimelineItem key={m.year} m={m} index={i} />
           ))}

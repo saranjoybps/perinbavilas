@@ -20,15 +20,89 @@ const TABS = [
 ];
 
 const PROFILE_FIELD_LABELS = {
+  name: 'Name',
+  dob: 'Date of Birth',
+  dod: 'Date of Death',
+  family_name: 'Family Name',
+  occupation: 'Occupation',
+  address: 'Address',
+  email: 'Email',
+  landline: 'Landline',
+  cell_numbers: 'Phone Numbers',
+  spouses: 'Spouses',
+  spouse: 'Spouse',
+  children: 'Children',
+  photos: 'Photos',
   displayName: 'Full Name',
   phone: 'Phone',
   branch: 'Branch',
   profession: 'Profession',
   location: 'Location',
-  address: 'Address',
   dateOfBirth: 'Date of Birth',
   bio: 'About Me',
 };
+
+function formatChangeValue(key, value) {
+  if (value === null || value === undefined || value === '') return '—';
+
+  if (key === 'cell_numbers') {
+    return Array.isArray(value) ? (value.join(', ') || '—') : String(value);
+  }
+
+  if (key === 'spouses' || key === 'spouse') {
+    const list = key === 'spouse'
+      ? (value?.name ? [value] : [])
+      : (Array.isArray(value) ? value : []);
+    if (!list.length) return '—';
+    return list
+      .map((s) => {
+        const parts = [s.name || 'Unnamed'];
+        if (s.dob) parts.push(`DOB ${s.dob}`);
+        if (s.dod) parts.push(`DOD ${s.dod}`);
+        return parts.join(' · ');
+      })
+      .join('; ');
+  }
+
+  if (key === 'children') {
+    const list = Array.isArray(value) ? value : [];
+    if (!list.length) return '—';
+    return list
+      .map((c) => {
+        const parts = [c.code ? `[${c.code}]` : '', c.name || 'Unnamed'].filter(Boolean);
+        if (c.dob) parts.push(`DOB ${c.dob}`);
+        if (c.dod) parts.push(`DOD ${c.dod}`);
+        return parts.join(' ');
+      })
+      .join('; ');
+  }
+
+  if (key === 'photos') {
+    const list = Array.isArray(value) ? value.filter(Boolean) : [];
+    if (!list.length) return '—';
+    return (
+      <span style={{ display: 'inline-flex', gap: '0.35rem', flexWrap: 'wrap', verticalAlign: 'middle' }}>
+        {list.map((url, i) => (
+          <img
+            key={`${url}-${i}`}
+            src={url}
+            alt={`Photo ${i + 1}`}
+            style={{
+              width: 44,
+              height: 44,
+              objectFit: 'cover',
+              borderRadius: 3,
+              border: '1px solid rgba(26, 61, 46,0.25)',
+              display: 'block',
+            }}
+          />
+        ))}
+      </span>
+    );
+  }
+
+  return String(value);
+}
 
 function permissionOf(user) {
   return user.permission === 'revoke' ? 'revoke' : 'grant';
@@ -100,7 +174,7 @@ export default function AdminRequestsPage() {
             fontSize: '0.68rem',
             letterSpacing: '0.4em',
             textTransform: 'uppercase',
-            color: 'rgba(196,155,26,0.65)',
+            color: 'rgba(15, 42, 31,0.65)',
             marginBottom: '0.4rem',
           }}
         >
@@ -124,7 +198,7 @@ export default function AdminRequestsPage() {
       <div
         className="flex gap-1 mb-8"
         style={{
-          borderBottom: '1px solid rgba(212,175,55,0.18)',
+          borderBottom: '1px solid rgba(26, 61, 46,0.18)',
         }}
       >
         {TABS.map((t) => (
@@ -139,16 +213,16 @@ export default function AdminRequestsPage() {
               padding: '0.7rem 1.5rem',
               background:
                 tab === t.key
-                  ? 'rgba(196,155,26,0.08)'
+                  ? 'rgba(15, 42, 31,0.08)'
                   : 'transparent',
               color:
                 tab === t.key
-                  ? '#C49B1A'
+                  ? '#0F2A1F'
                   : 'rgba(26,16,8,0.4)',
               border: 'none',
               borderBottom:
                 tab === t.key
-                  ? '2px solid #C49B1A'
+                  ? '2px solid #0F2A1F'
                   : '2px solid transparent',
               cursor: 'pointer',
             }}
@@ -165,8 +239,8 @@ export default function AdminRequestsPage() {
               width: 32,
               height: 32,
               borderRadius: '50%',
-              border: '1.5px solid rgba(196,155,26,0.2)',
-              borderTopColor: '#C49B1A',
+              border: '1.5px solid rgba(15, 42, 31,0.2)',
+              borderTopColor: '#0F2A1F',
               animation: 'spin 1s linear infinite',
             }}
           />
@@ -200,12 +274,12 @@ export default function AdminRequestsPage() {
                         width: 32,
                         height: 32,
                         borderRadius: '50%',
-                        background: 'rgba(196,155,26,0.12)',
+                        background: 'rgba(15, 42, 31,0.12)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '0.85rem',
-                        color: '#C49B1A',
+                        color: '#0F2A1F',
                       }}
                     >
                       {req.displayName?.charAt(0)?.toUpperCase() || '?'}
@@ -238,17 +312,26 @@ export default function AdminRequestsPage() {
                         }}
                       >
                         {req.email}
-
+                        {req.familyCode && (
+                          <span
+                            style={{
+                              color: 'rgba(15, 42, 31,0.75)',
+                              marginLeft: '0.5rem',
+                            }}
+                          >
+                            Code {req.familyCode}
+                          </span>
+                        )}
                         <span
                           style={{
-                            color: 'rgba(196,155,26,0.6)',
+                            color: 'rgba(15, 42, 31,0.6)',
                             textTransform: 'uppercase',
                             fontSize: '0.55rem',
                             letterSpacing: '0.12em',
                             marginLeft: '0.5rem',
                           }}
                         >
-                          {req.role || 'member'}
+                          {req.role === 'super_admin' ? 'admin' : (req.role || 'member')}
                         </span>
                       </p>
                     </div>
@@ -262,8 +345,8 @@ export default function AdminRequestsPage() {
                       className="px-4 py-1.5 text-xs tracking-widest uppercase"
                       style={{
                         fontFamily: 'var(--font-inter)',
-                        border: '1px solid rgba(196,155,26,0.45)',
-                        color: '#C49B1A',
+                        border: '1px solid rgba(15, 42, 31,0.45)',
+                        color: '#0F2A1F',
                         background: 'transparent',
                         cursor:
                           acting === 'edit-' + req.id
@@ -310,7 +393,7 @@ export default function AdminRequestsPage() {
                 <div
                   style={{
                     borderTop:
-                      '1px solid rgba(212,175,55,0.12)',
+                      '1px solid rgba(26, 61, 46,0.12)',
                     paddingTop: '0.75rem',
                   }}
                 >
@@ -367,8 +450,9 @@ export default function AdminRequestsPage() {
                     </div>
                   </div>
 
-                  {Object.entries(req.changes || {}).map(
-                    ([key, val]) => (
+                  {Object.entries(req.changes || {})
+                    .filter(([key]) => !(key === 'spouse' && Object.prototype.hasOwnProperty.call(req.changes || {}, 'spouses')))
+                    .map(([key, val]) => (
                       <div
                         key={key}
                         style={{
@@ -377,7 +461,7 @@ export default function AdminRequestsPage() {
                           gap: '0.5rem',
                           padding: '0.4rem 0',
                           borderBottom:
-                            '1px solid rgba(212,175,55,0.06)',
+                            '1px solid rgba(26, 61, 46,0.06)',
                         }}
                       >
                         <p
@@ -398,7 +482,7 @@ export default function AdminRequestsPage() {
                             gap: '0.5rem',
                           }}
                         >
-                          <p
+                          <div
                             style={{
                               fontFamily: 'var(--font-inter)',
                               fontSize: '0.72rem',
@@ -409,12 +493,10 @@ export default function AdminRequestsPage() {
                               borderRadius: 2,
                             }}
                           >
-                            {String(
-                              req.currentValues?.[key] || '-'
-                            )}
-                          </p>
+                            {formatChangeValue(key, req.currentValues?.[key])}
+                          </div>
 
-                          <p
+                          <div
                             style={{
                               fontFamily: 'var(--font-inter)',
                               fontSize: '0.72rem',
@@ -426,12 +508,11 @@ export default function AdminRequestsPage() {
                               borderRadius: 2,
                             }}
                           >
-                            {String(val || '-')}
-                          </p>
+                            {formatChangeValue(key, val)}
+                          </div>
                         </div>
                       </div>
-                    )
-                  )}
+                    ))}
                 </div>
               </div>
             ))}

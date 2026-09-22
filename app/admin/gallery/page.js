@@ -55,7 +55,7 @@ export default function AdminGalleryPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.2)', borderTopColor: '#C49B1A', animation: 'spin 1s linear infinite' }} />
+        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.2)', borderTopColor: '#0F2A1F', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
@@ -63,7 +63,7 @@ export default function AdminGalleryPage() {
   return (
     <>
       <div className="mb-8">
-        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(196,155,26,0.65)', marginBottom: '0.4rem' }}>Admin</p>
+        <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.68rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(15, 42, 31,0.65)', marginBottom: '0.4rem' }}>Admin</p>
         <h1 style={{ fontFamily: 'var(--font-cormorant)', fontSize: 'clamp(1.5rem, 4.5vw, 2rem)', fontWeight: 300, color: '#1A1008' }}>Gallery</h1>
         <span className="gold-rule block mt-3" />
       </div>
@@ -93,9 +93,9 @@ export default function AdminGalleryPage() {
                     onClick={() => handleApprove(item.id)}
                     disabled={acting === item.id}
                     className="px-3 py-1 text-xs tracking-widest uppercase"
-                    style={{ fontFamily: 'var(--font-inter)', border: '1px solid rgba(196,155,26,0.45)', color: '#C49B1A', background: 'transparent', cursor: acting === item.id ? 'wait' : 'pointer', opacity: acting === item.id ? 0.6 : 1, letterSpacing: '0.14em', fontSize: '0.6rem', transition: 'all 0.2s' }}
-                    onMouseEnter={(e) => { if (acting !== item.id) { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; } }}
-                    onMouseLeave={(e) => { if (acting !== item.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; } }}
+                    style={{ fontFamily: 'var(--font-inter)', border: '1px solid rgba(15, 42, 31,0.45)', color: '#0F2A1F', background: 'transparent', cursor: acting === item.id ? 'wait' : 'pointer', opacity: acting === item.id ? 0.6 : 1, letterSpacing: '0.14em', fontSize: '0.6rem', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => { if (acting !== item.id) { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; } }}
+                    onMouseLeave={(e) => { if (acting !== item.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; } }}
                   >
                     Approve
                   </button>
@@ -123,7 +123,7 @@ export default function AdminGalleryPage() {
         </h2>
         {approved.length === 0 ? (
           <div className="glass-warm shadow-cloud p-10 text-center max-w-md">
-            <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.8rem', color: '#D4AF37', marginBottom: '0.75rem' }}>▣</p>
+            <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.8rem', color: '#1A3D2E', marginBottom: '0.75rem' }}>▣</p>
             <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.875rem', color: 'rgba(26,16,8,0.45)' }}>No approved photos yet.</p>
           </div>
         ) : (
