@@ -20,7 +20,7 @@ export default function RegisterForm() {
     setLoading(true);
     try {
       await signUpWithEmail(form.email, form.password, form.name);
-      router.push('/dashboard');
+      router.push('/dashboard/family-book');
     } catch (err) {
       setError(err.code === 'auth/email-already-in-use' ? 'That email is already registered.' : 'Registration failed. Please try again.');
     } finally {

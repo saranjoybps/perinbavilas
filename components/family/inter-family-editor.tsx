@@ -41,7 +41,7 @@ type FamilyFormValues = z.infer<typeof familySchema>;
 const inputStyle = {
   width: '100%',
   background: 'rgba(255,255,255,0.72)',
-  border: '1px solid rgba(212,175,55,0.22)',
+  border: '1px solid rgba(15, 42, 31,0.22)',
   padding: '0.65rem 0.8rem',
   fontFamily: 'var(--font-inter)',
   fontSize: '0.8rem',
@@ -74,9 +74,9 @@ const btnBase = {
   letterSpacing: '0.14em',
   textTransform: 'uppercase' as const,
   padding: '0.6rem 1.4rem',
-  border: '1px solid rgba(196,155,26,0.45)',
+  border: '1px solid rgba(15, 42, 31,0.45)',
   background: 'transparent',
-  color: '#C49B1A',
+  color: '#0F2A1F',
   cursor: 'pointer',
   transition: 'all 0.2s',
 };
@@ -84,7 +84,7 @@ const btnBase = {
 const btnPrimary = {
   ...btnBase,
   color: '#FFF7ED',
-  background: '#C49B1A',
+  background: '#0F2A1F',
 };
 
 const tabStyle = (active: boolean) => ({
@@ -93,10 +93,10 @@ const tabStyle = (active: boolean) => ({
   letterSpacing: '0.1em',
   textTransform: 'uppercase' as const,
   padding: '0.6rem 1rem',
-  background: active ? 'rgba(196,155,26,0.08)' : 'transparent',
-  color: active ? '#C49B1A' : 'rgba(26,16,8,0.4)',
+  background: active ? 'rgba(15, 42, 31,0.08)' : 'transparent',
+  color: active ? '#0F2A1F' : 'rgba(26,16,8,0.4)',
   border: 'none',
-  borderBottom: active ? '2px solid #C49B1A' : '2px solid transparent',
+  borderBottom: active ? '2px solid #0F2A1F' : '2px solid transparent',
   cursor: 'pointer',
   transition: 'all 0.2s',
 });
@@ -317,7 +317,7 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
     <div style={{ position: 'fixed', inset: 0, zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(26,16,8,0.35)', backdropFilter: 'blur(2px)' }}
       onClick={() => handleOpenChange(false)}>
       <div className="glass-warm shadow-cloud"
-        style={{ width: '100%', maxWidth: '48rem', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem 2rem', borderTop: '2px solid rgba(196,155,26,0.4)' }}
+        style={{ width: '100%', maxWidth: '48rem', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem 2rem', borderTop: '2px solid rgba(15, 42, 31,0.4)' }}
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}>
         <p style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.15rem', fontWeight: 400, color: '#1A1008', marginBottom: '0.3rem' }}>
@@ -364,16 +364,16 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
                       style={{
                         display: 'flex', alignItems: 'center', gap: '0.6rem',
                         padding: '0.5rem 0.75rem',
-                        background: selectedChild1 === child.code ? 'rgba(196,155,26,0.1)' : 'rgba(255,255,255,0.5)',
-                        border: selectedChild1 === child.code ? '1px solid rgba(196,155,26,0.5)' : '1px solid rgba(212,175,55,0.15)',
+                        background: selectedChild1 === child.code ? 'rgba(15, 42, 31,0.1)' : 'rgba(255,255,255,0.5)',
+                        border: selectedChild1 === child.code ? '1px solid rgba(15, 42, 31,0.5)' : '1px solid rgba(15, 42, 31,0.15)',
                         borderRadius: '5px', cursor: 'pointer', transition: 'all 0.15s',
                         textAlign: 'left', fontFamily: 'var(--font-inter)',
                       }}
                     >
                       <span style={{
-                        width: '18px', height: '18px', borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.4)',
+                        width: '18px', height: '18px', borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.4)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        background: selectedChild1 === child.code ? '#C49B1A' : 'transparent',
+                        background: selectedChild1 === child.code ? '#0F2A1F' : 'transparent',
                       }}>
                         {selectedChild1 === child.code && (
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
@@ -429,16 +429,16 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
                       style={{
                         display: 'flex', alignItems: 'center', gap: '0.6rem',
                         padding: '0.5rem 0.75rem',
-                        background: selectedChild2 === child.code ? 'rgba(196,155,26,0.1)' : 'rgba(255,255,255,0.5)',
-                        border: selectedChild2 === child.code ? '1px solid rgba(196,155,26,0.5)' : '1px solid rgba(212,175,55,0.15)',
+                        background: selectedChild2 === child.code ? 'rgba(15, 42, 31,0.1)' : 'rgba(255,255,255,0.5)',
+                        border: selectedChild2 === child.code ? '1px solid rgba(15, 42, 31,0.5)' : '1px solid rgba(15, 42, 31,0.15)',
                         borderRadius: '5px', cursor: 'pointer', transition: 'all 0.15s',
                         textAlign: 'left', fontFamily: 'var(--font-inter)',
                       }}
                     >
                       <span style={{
-                        width: '18px', height: '18px', borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.4)',
+                        width: '18px', height: '18px', borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.4)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        background: selectedChild2 === child.code ? '#C49B1A' : 'transparent',
+                        background: selectedChild2 === child.code ? '#0F2A1F' : 'transparent',
                       }}>
                         {selectedChild2 === child.code && (
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
@@ -462,9 +462,9 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
 
         {/* Generated code preview */}
         {selectionReady && (
-          <div style={{ marginBottom: '1.25rem', padding: '0.6rem 1rem', background: 'rgba(196,155,26,0.06)', border: '1px solid rgba(196,155,26,0.15)', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div style={{ marginBottom: '1.25rem', padding: '0.6rem 1rem', background: 'rgba(15, 42, 31,0.06)', border: '1px solid rgba(15, 42, 31,0.15)', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'var(--font-inter)', fontSize: '0.62rem', letterSpacing: '0.24em', textTransform: 'uppercase' as const, color: 'rgba(26,16,8,0.42)' }}>Code:&nbsp;</span>
-            <span style={{ fontFamily: 'var(--font-inter)', fontSize: '0.85rem', fontWeight: 600, color: '#C49B1A' }}>{generatedCode}</span>
+            <span style={{ fontFamily: 'var(--font-inter)', fontSize: '0.85rem', fontWeight: 600, color: '#0F2A1F' }}>{generatedCode}</span>
             <span style={{ fontFamily: 'var(--font-inter)', fontSize: '0.7rem', color: 'rgba(26,16,8,0.5)' }}>
               ({child1Data?.name} / {child2Data?.name})
             </span>
@@ -474,7 +474,7 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
         {/* Tabs + form — only after both children selected */}
         {selectionReady && (
           <>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0', borderBottom: '1px solid rgba(212,175,55,0.18)', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0', borderBottom: '1px solid rgba(15, 42, 31,0.18)', marginBottom: '1.25rem' }}>
               {(['basic', 'spouse', 'children', 'photos'] as const).map((tab) => (
                 <button key={tab} style={tabStyle(activeTab === tab)} onClick={() => setActiveTab(tab)}>
                   {tab === 'basic' ? 'Basic Info' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -487,7 +487,7 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label style={labelStyle}>Code</label>
-                    <input style={{ ...inputStyle, background: 'rgba(212,175,55,0.08)', cursor: 'default', maxWidth: '14rem' }} value={watch("code")} readOnly />
+                    <input style={{ ...inputStyle, background: 'rgba(15, 42, 31,0.08)', cursor: 'default', maxWidth: '14rem' }} value={watch("code")} readOnly />
                     {errors.code && <p style={errorTextStyle}>{errors.code.message}</p>}
                   </div>
                   <div>
@@ -571,13 +571,13 @@ export function InterFamilyEditor({ onSave, open, onOpenChange }: InterFamilyEdi
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <button type="button" style={btnBase} onClick={() => handleOpenChange(false)}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(196,155,26,0.08)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15, 42, 31,0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                   Cancel
                 </button>
                 <button type="submit" style={{ ...btnPrimary, opacity: saving ? 0.5 : 1 }} disabled={saving}
-                  onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#b38b17'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#C49B1A'; }}>
+                  onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#0A1C14'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#0F2A1F'; }}>
                   {saving ? "Saving..." : "Create Marriage Record"}
                 </button>
               </div>

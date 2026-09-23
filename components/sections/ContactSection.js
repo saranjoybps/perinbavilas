@@ -95,12 +95,15 @@ export default function ContactSection() {
     >
       <SectionDecor position="top-right" />
 
-      {/* Soft glow */}
+      {/* Soft glow — capped so it never expands mobile scroll width */}
       <div
         className="absolute pointer-events-none"
         style={{
-          top: '10%', left: '5%',
-          width: 500, height: 400,
+          top: '10%',
+          left: '5%',
+          width: 'min(500px, 90%)',
+          height: 400,
+          maxWidth: '100%',
           background: 'radial-gradient(ellipse at 40% 40%, rgba(26, 61, 46,0.07) 0%, transparent 70%)',
           filter: 'blur(40px)',
         }}
@@ -109,22 +112,12 @@ export default function ContactSection() {
 
       <div
         ref={sectionRef}
-        className="relative mx-auto max-w-7xl px-6 lg:px-12"
+        className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-12"
         style={{ zIndex: 1 }}
       >
         <div className="grid items-start gap-10 md:grid-cols-2 md:gap-12 lg:items-stretch lg:gap-14">
           {/* Left copy */}
           <div ref={leftRef} className="flex h-full flex-col">
-            <div className="mb-5 flex items-center gap-4 lg:mb-6">
-              <span className="gold-rule" style={{ marginLeft: 0 }} />
-              <span
-                className="text-xs tracking-[0.4em] uppercase"
-                style={{ fontFamily: 'var(--font-inter)', color: '#0F2A1F' }}
-              >
-                Connect
-              </span>
-            </div>
-
             <h2
               style={{
                 fontFamily: 'var(--font-cormorant)',
@@ -181,9 +174,9 @@ export default function ContactSection() {
                 style={{
                   fontFamily: 'var(--font-inter)',
                   fontSize: '0.75rem',
-                  border: '1px solid rgba(15, 42, 31,0.45)',
-                  color: '#0F2A1F',
-                  background: 'transparent',
+                  border: '1px solid #0F2A1F',
+                  color: '#FFF7ED',
+                  background: '#0F2A1F',
                   textDecoration: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -193,8 +186,8 @@ export default function ContactSection() {
                   textTransform: 'uppercase',
                   transition: 'all 0.2s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#1A3D2E'; e.currentTarget.style.borderColor = '#1A3D2E'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.borderColor = '#0F2A1F'; }}
               >
                 Go to Portal
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -281,9 +274,9 @@ export default function ContactSection() {
                     className="w-full py-3.5 text-sm tracking-widest uppercase"
                     style={{
                       fontFamily: 'var(--font-inter)',
-                      border: '1px solid rgba(15, 42, 31,0.45)',
-                      color: '#0F2A1F',
-                      background: 'transparent',
+                      border: '1px solid #0F2A1F',
+                      color: '#FFF7ED',
+                      background: '#0F2A1F',
                       letterSpacing: '0.14em',
                       cursor: status === 'sending' ? 'wait' : 'pointer',
                       opacity: status === 'sending' ? 0.7 : 1,
@@ -291,8 +284,8 @@ export default function ContactSection() {
                     }}
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
-                    onMouseEnter={(e) => { if (status !== 'sending') { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; } }}
-                    onMouseLeave={(e) => { if (status !== 'sending') { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; } }}
+                    onMouseEnter={(e) => { if (status !== 'sending') { e.currentTarget.style.background = '#1A3D2E'; e.currentTarget.style.borderColor = '#1A3D2E'; } }}
+                    onMouseLeave={(e) => { if (status !== 'sending') { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.borderColor = '#0F2A1F'; } }}
                   >
                     {status === 'sending' ? 'Sending…' : status === 'error' ? 'Try Again' : 'Request Access'}
                   </motion.button>

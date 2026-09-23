@@ -2,18 +2,27 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { serializeDoc, errorResponse, verifyAuth } from '@/lib/api-helpers';
 
+const ADMIN_ROLES = ['admin', 'super_admin'];
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
+    const showOnHome = searchParams.get('showOnHome');
 
-    let query = adminDb.collection('gallery').orderBy('createdAt', 'desc');
+    // Filter in memory so we don't require a Firestore composite index
+    const snap = await adminDb.collection('gallery').orderBy('createdAt', 'desc').get();
+    let items = snap.docs.map(serializeDoc);
+
     if (status) {
-      query = query.where('status', '==', status);
+      items = items.filter((item) => item.status === status);
+    }
+    if (showOnHome === 'true') {
+      items = items.filter((item) => item.showOnHome === true);
+    } else if (showOnHome === 'false') {
+      items = items.filter((item) => !item.showOnHome);
     }
 
-    const snap = await query.get();
-    const items = snap.docs.map(serializeDoc);
     return NextResponse.json(items);
   } catch (err) {
     return errorResponse(err);
@@ -24,7 +33,7 @@ export async function POST(request) {
   try {
     const decoded = await verifyAuth(request);
     const body = await request.json();
-    const { url, caption } = body;
+    const { url, caption, publicId, status: rawStatus, showOnHome } = body;
 
     if (!url) {
       return NextResponse.json({ error: 'url is required' }, { status: 400 });
@@ -32,13 +41,22 @@ export async function POST(request) {
 
     const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
     const userData = userSnap.data() || {};
+    const role = decoded.role || userData.role;
+    const isAdmin = ADMIN_ROLES.includes(role);
+
+    // Members always create pending requests; admins may publish immediately
+    const status = isAdmin && rawStatus === 'approved' ? 'approved' : 'pending';
+
     const ref = await adminDb.collection('gallery').add({
       url,
+      publicId: publicId || '',
       caption: caption || '',
       uploadedBy: decoded.uid,
       uploadedByName: userData.displayName || decoded.email || 'Unknown',
-      status: 'pending',
+      status,
+      showOnHome: Boolean(showOnHome),
       createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     const doc = await ref.get();

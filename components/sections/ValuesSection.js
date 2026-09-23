@@ -121,15 +121,6 @@ export default function ValuesSection() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-12" style={{ zIndex: 1 }}>
         <div className="values-header mb-8 text-center sm:mb-12 md:mb-16">
-          <div className="mb-3 flex items-center justify-center gap-4 sm:mb-5">
-            <span
-              className="text-xs tracking-[0.4em] uppercase"
-              style={{ fontFamily: 'var(--font-inter)', color: '#0F2A1F' }}
-            >
-              What We Stand For
-            </span>
-          </div>
-
           <h2
             style={{
               fontFamily: 'var(--font-cormorant)',

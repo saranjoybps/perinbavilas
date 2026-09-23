@@ -25,7 +25,7 @@ function Typewriter({ text, start, onDone, className }) {
         setFinished(true);
         onDone?.();
       }
-    }, 28);
+    }, 22);
     return () => window.clearInterval(id);
   }, [start, text, finished, onDone]);
 
@@ -42,23 +42,23 @@ function Typewriter({ text, start, onDone, className }) {
 export default function EnvelopeGate() {
   const pathname = usePathname();
   const { ready, active, complete } = useWelcomeGate();
-  // boot → typing → invite (ask click) → sealed (seal shows) → opening (go home)
+  // typing → invite → sealed → (complete fades gate away)
   const [phase, setPhase] = useState('boot');
   const [typingKey, setTypingKey] = useState(0);
 
-  const booting = pathname === '/' && !ready;
-  const visible = booting || (ready && active);
-  const showCopy = phase === 'typing' || phase === 'invite' || phase === 'sealed' || phase === 'opening';
-  const showRef = phase === 'invite' || phase === 'sealed' || phase === 'opening';
+  // Only mount when we know welcome should show — never flash during localStorage check
+  const visible = pathname === '/' && ready && active;
+  const showCopy = phase === 'typing' || phase === 'invite' || phase === 'sealed';
+  const showRef = phase === 'invite' || phase === 'sealed';
 
   useEffect(() => {
-    if (!ready || !active || booting) return undefined;
+    if (!visible) return undefined;
     setPhase('typing');
     setTypingKey((k) => k + 1);
-  }, [ready, active, booting]);
+  }, [visible]);
 
   const handleVerseDone = useCallback(() => {
-    window.setTimeout(() => setPhase('invite'), 500);
+    window.setTimeout(() => setPhase('invite'), 350);
   }, []);
 
   const handleClickPromise = () => {
@@ -68,11 +68,9 @@ export default function EnvelopeGate() {
 
   useEffect(() => {
     if (phase !== 'sealed') return undefined;
-    const goHome = window.setTimeout(() => {
-      setPhase('opening');
-      window.setTimeout(complete, 900);
-    }, 2800);
-    return () => window.clearTimeout(goHome);
+    // Seal shows briefly, then home fades in (was ~3.7s — felt stuck)
+    const id = window.setTimeout(() => complete(), 1200);
+    return () => window.clearTimeout(id);
   }, [phase, complete]);
 
   return (
@@ -82,13 +80,9 @@ export default function EnvelopeGate() {
           key="promise-gate"
           className="promise-gate"
           initial={{ opacity: 1 }}
-          animate={
-            phase === 'opening'
-              ? { opacity: 0, filter: 'blur(8px)', scale: 1.02 }
-              : { opacity: 1, filter: 'blur(0px)', scale: 1 }
-          }
-          exit={{ opacity: 0, filter: 'blur(8px)' }}
-          transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           role="dialog"
           aria-modal="true"
           aria-label="Family promise"
@@ -97,13 +91,13 @@ export default function EnvelopeGate() {
           <div className="promise-gate-glow promise-gate-glow--tl" aria-hidden="true" />
           <div className="promise-gate-glow promise-gate-glow--br" aria-hidden="true" />
 
-          {/* Decorative florals — same bouquet both corners */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/decorative-2.png"
             alt=""
             aria-hidden="true"
             className="promise-decor promise-decor--tr"
+            decoding="async"
           />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -111,9 +105,10 @@ export default function EnvelopeGate() {
             alt=""
             aria-hidden="true"
             className="promise-decor promise-decor--bl"
+            decoding="async"
           />
 
-          {!booting && (
+          {phase !== 'boot' && (
             <div className="promise-stage">
               <div className="promise-paper">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -122,6 +117,7 @@ export default function EnvelopeGate() {
                   alt=""
                   className="promise-paper-img promise-paper-img--sm"
                   draggable={false}
+                  decoding="async"
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -129,6 +125,7 @@ export default function EnvelopeGate() {
                   alt=""
                   className="promise-paper-img promise-paper-img--lg"
                   draggable={false}
+                  decoding="async"
                 />
 
                 <div className="promise-panel">
@@ -149,7 +146,7 @@ export default function EnvelopeGate() {
                           className="promise-ref"
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5 }}
+                          transition={{ duration: 0.4 }}
                         >
                           — {REFERENCE}
                         </motion.p>
@@ -168,24 +165,19 @@ export default function EnvelopeGate() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -6 }}
-                          transition={{ duration: 0.4 }}
+                          transition={{ duration: 0.35 }}
                         >
                           Click to receive the promise
                         </motion.button>
                       )}
 
-                      {(phase === 'sealed' || phase === 'opening') && (
+                      {phase === 'sealed' && (
                         <motion.div
                           key="seal-reveal"
                           className="promise-seal-wrap"
-                          initial={{ opacity: 0, scale: 0.7, y: 12 }}
-                          animate={
-                            phase === 'opening'
-                              ? { opacity: 0, scale: 1.12, y: -8 }
-                              : { opacity: 1, scale: 1, y: 0 }
-                          }
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                          initial={{ opacity: 0, scale: 0.82, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -193,6 +185,7 @@ export default function EnvelopeGate() {
                             alt=""
                             className="promise-seal-img"
                             draggable={false}
+                            decoding="async"
                           />
                           <span className="promise-seal-label">Promise sealed</span>
                         </motion.div>

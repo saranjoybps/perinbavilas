@@ -45,6 +45,12 @@ export default function AuthProvider({ children }) {
       if (firebaseUser) {
         setUser(firebaseUser);
         setRole(DEFAULT_ROLE);
+        // Cookie first — before any await — so login→portal redirect isn't blocked
+        try {
+          document.cookie = `__auth_token=${await firebaseUser.getIdToken()}; path=/; SameSite=Lax; max-age=3600`;
+        } catch {
+          /* ignore */
+        }
         try {
           const res = await fetch(`/api/users/${firebaseUser.uid}`);
           if (res.ok) {
@@ -59,8 +65,6 @@ export default function AuthProvider({ children }) {
         } catch (err) {
           console.warn('Auth: API unavailable', err);
         }
-        // Set auth cookie for middleware
-        document.cookie = `__auth_token=${await firebaseUser.getIdToken()}; path=/; SameSite=Strict`;
       } else {
         setUser(null);
         setUserData(null);

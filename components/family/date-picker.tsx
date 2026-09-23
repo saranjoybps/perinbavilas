@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const inputStyle: React.CSSProperties = {
   width: '100%',
   background: 'rgba(255,255,255,0.72)',
-  border: '1px solid rgba(212,175,55,0.22)',
+  border: '1px solid rgba(15, 42, 31,0.22)',
   padding: '0.65rem 0.8rem',
   fontFamily: 'var(--font-inter)',
   fontSize: '0.8rem',

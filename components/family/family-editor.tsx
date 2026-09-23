@@ -44,7 +44,7 @@ type FamilyFormValues = z.infer<typeof familySchema>;
 const inputStyle = {
   width: '100%',
   background: 'rgba(255,255,255,0.72)',
-  border: '1px solid rgba(212,175,55,0.22)',
+  border: '1px solid rgba(15, 42, 31,0.22)',
   padding: '0.65rem 0.8rem',
   fontFamily: 'var(--font-inter)',
   fontSize: '0.8rem',
@@ -77,9 +77,9 @@ const btnBase = {
   letterSpacing: '0.14em',
   textTransform: 'uppercase' as const,
   padding: '0.6rem 1.4rem',
-  border: '1px solid rgba(196,155,26,0.45)',
+  border: '1px solid rgba(15, 42, 31,0.45)',
   background: 'transparent',
-  color: '#C49B1A',
+  color: '#0F2A1F',
   cursor: 'pointer',
   transition: 'all 0.2s',
 };
@@ -87,7 +87,7 @@ const btnBase = {
 const btnPrimary = {
   ...btnBase,
   color: '#FFF7ED',
-  background: '#C49B1A',
+  background: '#0F2A1F',
 };
 
 const tabStyle = (active: boolean) => ({
@@ -96,10 +96,10 @@ const tabStyle = (active: boolean) => ({
   letterSpacing: '0.1em',
   textTransform: 'uppercase' as const,
   padding: '0.6rem 1rem',
-  background: active ? 'rgba(196,155,26,0.08)' : 'transparent',
-  color: active ? '#C49B1A' : 'rgba(26,16,8,0.4)',
+  background: active ? 'rgba(15, 42, 31,0.08)' : 'transparent',
+  color: active ? '#0F2A1F' : 'rgba(26,16,8,0.4)',
   border: 'none',
-  borderBottom: active ? '2px solid #C49B1A' : '2px solid transparent',
+  borderBottom: active ? '2px solid #0F2A1F' : '2px solid transparent',
   cursor: 'pointer',
   transition: 'all 0.2s',
 });
@@ -334,14 +334,14 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
     <div style={{ position: 'fixed', inset: 0, zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(26,16,8,0.35)', backdropFilter: 'blur(2px)' }}
       onClick={() => handleOpenChange(false)}>
       <div className="glass-warm shadow-cloud"
-        style={{ width: '100%', maxWidth: '42rem', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem 2rem', borderTop: '2px solid rgba(196,155,26,0.4)' }}
+        style={{ width: '100%', maxWidth: '42rem', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem 2rem', borderTop: '2px solid rgba(15, 42, 31,0.4)' }}
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}>
         <p style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.15rem', fontWeight: 400, color: '#1A1008', marginBottom: '1.25rem' }}>
           {isEditing ? `Edit: ${record?.name}` : 'Add New Family'}
         </p>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0', borderBottom: '1px solid rgba(212,175,55,0.18)', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0', borderBottom: '1px solid rgba(15, 42, 31,0.18)', marginBottom: '1.25rem' }}>
           {(['basic', 'spouse', 'children', 'photos'] as const).map((tab) => (
             <button key={tab} style={tabStyle(activeTab === tab)} onClick={() => setActiveTab(tab)}>
               {tab === 'basic' ? 'Basic Info' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -386,16 +386,16 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
                               style={{
                                 display: 'flex', alignItems: 'center', gap: '0.6rem',
                                 padding: '0.55rem 0.75rem',
-                                background: selectedChildCode === child.code ? 'rgba(196,155,26,0.1)' : 'rgba(255,255,255,0.5)',
-                                border: selectedChildCode === child.code ? '1px solid rgba(196,155,26,0.5)' : '1px solid rgba(212,175,55,0.15)',
+                                background: selectedChildCode === child.code ? 'rgba(15, 42, 31,0.1)' : 'rgba(255,255,255,0.5)',
+                                border: selectedChildCode === child.code ? '1px solid rgba(15, 42, 31,0.5)' : '1px solid rgba(15, 42, 31,0.15)',
                                 borderRadius: '5px', cursor: 'pointer', transition: 'all 0.15s',
                                 textAlign: 'left', fontFamily: 'var(--font-inter)',
                               }}
                             >
                               <span style={{
-                                width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid rgba(196,155,26,0.4)',
+                                width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.4)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                background: selectedChildCode === child.code ? '#C49B1A' : 'transparent',
+                                background: selectedChildCode === child.code ? '#0F2A1F' : 'transparent',
                               }}>
                                 {selectedChildCode === child.code && (
                                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
@@ -415,7 +415,7 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label style={labelStyle}>Family Code</label>
                       <input
-                        style={{ ...inputStyle, background: 'rgba(212,175,55,0.08)', cursor: 'default', maxWidth: '14rem' }}
+                        style={{ ...inputStyle, background: 'rgba(15, 42, 31,0.08)', cursor: 'default', maxWidth: '14rem' }}
                         value={watch("code") || ""}
                         readOnly
                       />
@@ -472,9 +472,9 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
           {activeTab === 'spouse' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.25rem' }}>
               {watch("spouses").map((spouse, index) => (
-                <div key={index} style={{ border: '1px solid rgba(212,175,55,0.2)', borderRadius: '6px', padding: '0.85rem', background: 'rgba(255,255,255,0.35)' }}>
+                <div key={index} style={{ border: '1px solid rgba(15, 42, 31,0.2)', borderRadius: '6px', padding: '0.85rem', background: 'rgba(255,255,255,0.35)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                    <span style={{ ...labelStyle, marginBottom: 0, color: 'rgba(196,155,26,0.75)' }}>Spouse {index + 1}</span>
+                    <span style={{ ...labelStyle, marginBottom: 0, color: 'rgba(15, 42, 31,0.75)' }}>Spouse {index + 1}</span>
                     <button
                       type="button"
                       onClick={() => removeSpouse(index)}
@@ -507,8 +507,8 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
               ))}
               <div>
                 <button type="button" style={btnBase} onClick={addSpouse}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
                 >+ Add Spouse</button>
               </div>
             </div>
@@ -526,15 +526,15 @@ export function FamilyEditor({ record, onSave, open, onOpenChange }: FamilyEdito
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', paddingTop: '1rem', borderTop: '1px solid rgba(212,175,55,0.12)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', paddingTop: '1rem', borderTop: '1px solid rgba(15, 42, 31,0.12)' }}>
             <button type="button" style={btnBase}
               onClick={() => handleOpenChange(false)}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
             >Cancel</button>
             <button type="submit" style={{ ...btnPrimary, opacity: saving ? 0.55 : 1, cursor: saving ? 'default' : 'pointer' }} disabled={saving}
-              onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#b38b17'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#C49B1A'; }}
+              onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#0A1C14'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#0F2A1F'; }}
             >{saving ? 'Saving...' : isEditing ? 'Update' : 'Create'}</button>
           </div>
         </form>

@@ -1,38 +1,21 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import LazyVideo from '@/components/ui/LazyVideo';
+import { cloudinaryPoster, cloudinaryVideo } from '@/lib/media';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const FAITH_VIDEO =
-  'https://res.cloudinary.com/bsaqrrl4/video/upload/q_auto:eco/v1790078111/17782995-hd_1280_720_60fps_x3h7d9.mp4';
-const FAITH_POSTER =
-  'https://res.cloudinary.com/bsaqrrl4/video/upload/so_2,w_1600,q_auto,f_jpg/v1790078111/17782995-hd_1280_720_60fps_x3h7d9.jpg';
+const FAITH_PATH = 'v1790078111/17782995-hd_1280_720_60fps_x3h7d9.mp4';
+const FAITH_VIDEO = cloudinaryVideo(FAITH_PATH, 1280);
+const FAITH_POSTER = cloudinaryPoster(FAITH_PATH, 1400);
 
 export default function FaithSection() {
   const sectionRef = useRef(null);
   const contentRef = useRef(null);
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = true;
-    video.playsInline = true;
-    const tryPlay = () => {
-      video.play().catch(() => {});
-    };
-    tryPlay();
-    video.addEventListener('loadeddata', tryPlay);
-    document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
-    return () => {
-      video.removeEventListener('loadeddata', tryPlay);
-      document.removeEventListener('touchstart', tryPlay);
-    };
-  }, []);
 
   useGSAP(() => {
     gsap.fromTo(
@@ -64,20 +47,12 @@ export default function FaithSection() {
         background: '#0F2A1F',
       }}
     >
-      <video
-        ref={videoRef}
+      <LazyVideo
+        src={FAITH_VIDEO}
+        poster={FAITH_POSTER}
         className="absolute inset-0 h-full w-full object-cover"
         style={{ zIndex: 0, pointerEvents: 'none' }}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        poster={FAITH_POSTER}
-        aria-hidden="true"
-      >
-        <source src={FAITH_VIDEO} type="video/mp4" />
-      </video>
+      />
 
       <div
         className="absolute inset-0 pointer-events-none"
@@ -99,18 +74,6 @@ export default function FaithSection() {
           paddingBottom: 'clamp(2.5rem, 8vw, 4.5rem)',
         }}
       >
-        <p
-          style={{
-            fontFamily: 'var(--font-inter)',
-            fontSize: 'clamp(0.58rem, 2vw, 0.68rem)',
-            letterSpacing: '0.42em',
-            textTransform: 'uppercase',
-            color: 'rgba(168,196,180,0.9)',
-            marginBottom: '0.85rem',
-          }}
-        >
-          Our Faith
-        </p>
         <h2
           style={{
             fontFamily: 'var(--font-cormorant)',

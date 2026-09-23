@@ -26,7 +26,7 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     if (!loading && !user)     router.push('/login');
-    if (!loading && !isAdmin)  router.push('/dashboard');
+    if (!loading && !isAdmin)  router.push('/dashboard/family-book');
   }, [user, loading, isAdmin, router]);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function AdminLayout({ children }) {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF8F0' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(180deg, #F4F7F5 0%, #E7EFEA 100%)' }}>
       <div style={{ width: 36, height: 36, borderRadius: '50%', border: '1.5px solid rgba(15, 42, 31,0.2)', borderTopColor: '#0F2A1F', animation: 'spin 1s linear infinite' }} />
     </div>
   );
@@ -82,7 +82,7 @@ export default function AdminLayout({ children }) {
         <div style={{ margin: '1rem 0 0.25rem 1rem', fontFamily: 'var(--font-inter)', fontSize: '0.6rem', letterSpacing: '0.35em', textTransform: 'uppercase', color: 'rgba(26,16,8,0.25)' }}>
           Back
         </div>
-        <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2.5" style={{ fontFamily: 'var(--font-inter)', fontSize: '0.825rem', textDecoration: 'none', color: 'rgba(26,16,8,0.4)', borderLeft: '2px solid transparent' }}>
+        <Link href="/dashboard/family-book" className="flex items-center gap-3 px-4 py-2.5" style={{ fontFamily: 'var(--font-inter)', fontSize: '0.825rem', textDecoration: 'none', color: 'rgba(26,16,8,0.4)', borderLeft: '2px solid transparent' }}>
           ← Dashboard
         </Link>
       </nav>
@@ -90,9 +90,9 @@ export default function AdminLayout({ children }) {
       <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(26, 61, 46,0.12)', marginTop: 'auto' }}>
         <button
           onClick={handleSignOut}
-          style={{ fontFamily: 'var(--font-inter)', fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,16,8,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          style={{ fontFamily: 'var(--font-inter)', fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(15, 42, 31,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           onMouseEnter={(e) => (e.currentTarget.style.color = '#b03030')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(26,16,8,0.35)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(15, 42, 31,0.4)')}
         >
           Sign Out
         </button>
@@ -101,15 +101,15 @@ export default function AdminLayout({ children }) {
   );
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#FFF8F0' }}>
+    <div className="min-h-screen flex" style={{ background: 'linear-gradient(180deg, #F7FAF8 0%, #EEF3F0 100%)' }}>
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3"
-        style={{ background: 'rgba(255,251,245,0.98)', borderBottom: '1px solid rgba(26, 61, 46,0.18)' }}>
+        style={{ background: 'rgba(247,250,248,0.96)', borderBottom: '1px solid rgba(15, 42, 31,0.1)', backdropFilter: 'blur(12px)' }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
           <span style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.1rem', color: '#0F2A1F' }}>Perinba Vilas</span>
         </Link>
         <button onClick={() => setMobileOpen(true)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#1A1008', padding: '0.25rem', lineHeight: 1 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#0F2A1F', padding: '0.25rem', lineHeight: 1 }}>
           ☰
         </button>
       </header>
@@ -119,8 +119,8 @@ export default function AdminLayout({ children }) {
         style={{
           width: 240,
           minHeight: '100vh',
-          background: 'rgba(255,251,245,0.98)',
-          borderRight: '1px solid rgba(26, 61, 46,0.18)',
+          background: 'rgba(255,255,255,0.92)',
+          borderRight: '1px solid rgba(15, 42, 31,0.1)',
           padding: '2rem 0',
           position: 'sticky', top: 0,
           height: '100vh', overflowY: 'auto',
@@ -137,7 +137,7 @@ export default function AdminLayout({ children }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-40 md:hidden"
-            style={{ background: 'rgba(26,16,8,0.3)' }}
+            style={{ background: 'rgba(15, 42, 31,0.35)' }}
             onClick={() => setMobileOpen(false)}
           />
         )}
@@ -147,8 +147,8 @@ export default function AdminLayout({ children }) {
       <aside className="md:hidden fixed top-0 left-0 z-50 h-full"
         style={{
           width: 260,
-          background: 'rgba(255,251,245,0.98)',
-          borderRight: '1px solid rgba(26, 61, 46,0.18)',
+          background: 'rgba(255,255,255,0.98)',
+          borderRight: '1px solid rgba(15, 42, 31,0.1)',
           padding: '2rem 0',
           overflowY: 'auto',
           transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
@@ -157,7 +157,7 @@ export default function AdminLayout({ children }) {
       >
         <div style={{ padding: '0 1.5rem 1rem', display: 'flex', justifyContent: 'flex-end' }}>
           <button onClick={() => setMobileOpen(false)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', color: '#1A1008', padding: '0.25rem', lineHeight: 1 }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', color: '#0F2A1F', padding: '0.25rem', lineHeight: 1 }}>
             ✕
           </button>
         </div>

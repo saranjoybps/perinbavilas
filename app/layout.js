@@ -44,6 +44,14 @@ export default function RootLayout({ children }) {
       className={`${inter.variable} ${playfair.variable} ${cormorant.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Runs before paint — covers home until welcome gate is ready (avoids hero flash) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=location.pathname;if(p!=='/'&&p!=='')return;var f=/(?:^|[?&])welcome=1(?:&|$)/.test(location.search);var o=localStorage.getItem('pv-welcome-opened')==='1';var root=document.documentElement;if(f||!o){root.classList.add('pv-welcome-pending');}else{root.classList.add('pv-home-booting');}setTimeout(function(){root.classList.remove('pv-welcome-pending');root.classList.remove('pv-home-booting');},4000);}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <AuthProvider>
           <LenisProvider>

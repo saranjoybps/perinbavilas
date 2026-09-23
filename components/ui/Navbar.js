@@ -9,11 +9,8 @@ import { signOutUser } from '@/lib/firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 
 const NAV = [
-  { label: 'Values',   href: '#values'   },
-  { label: 'Timeline', href: '#timeline' },
-  { label: 'Gallery',  href: '#gallery'  },
-  { label: 'Legacy',   href: '#legacy'   },
-  { label: 'Faith',    href: '#faith'    },
+  { label: 'Introduction', href: '/introduction' },
+  { label: 'Gallery',      href: '/gallery' },
 ];
 
 export default function Navbar() {
@@ -21,7 +18,10 @@ export default function Navbar() {
   const { ready, active: welcomeActive } = useWelcomeGate();
   const router            = useRouter();
   const pathname          = usePathname();
-  const isAppRoute        = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard');
+  const isAppRoute =
+    pathname?.startsWith('/admin') ||
+    pathname?.startsWith('/dashboard') ||
+    pathname?.startsWith('/login');
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -39,7 +39,7 @@ export default function Navbar() {
 
   if (!ready || isAppRoute || welcomeActive) return null;
 
-  const overHero = !scrolled;
+  const overHero = pathname === '/' && !scrolled;
   const brandColor = overHero ? '#FFF7ED' : '#0F2A1F';
   const linkColor = overHero ? 'rgba(255,247,237,0.82)' : 'rgba(15,42,31,0.62)';
   const linkHover = '#A8C4B4';
@@ -48,9 +48,9 @@ export default function Navbar() {
     <motion.nav
       className="fixed top-0 left-0 right-0 z-50"
       style={{
-        background: scrolled ? 'rgba(255,255,255,0.94)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(20px) saturate(1.4)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(15, 42, 31,0.2)' : 'none',
+        background: scrolled || pathname !== '/' ? 'rgba(255,255,255,0.94)' : 'transparent',
+        backdropFilter: scrolled || pathname !== '/' ? 'blur(20px) saturate(1.4)' : 'none',
+        borderBottom: scrolled || pathname !== '/' ? '1px solid rgba(15, 42, 31,0.2)' : 'none',
         transition: 'background 0.4s ease, backdrop-filter 0.4s ease, border-color 0.4s ease',
       }}
       initial={{ y: -80, opacity: 0 }}
@@ -75,26 +75,31 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
-          {NAV.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              style={{
-                fontFamily: 'var(--font-inter)',
-                fontSize: '0.78rem',
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: linkColor,
-                textDecoration: 'none',
-                transition: 'color 0.2s',
-                textShadow: overHero ? '0 1px 12px rgba(0,0,0,0.22)' : 'none',
-              }}
-              onMouseEnter={(e) => (e.target.style.color = linkHover)}
-              onMouseLeave={(e) => (e.target.style.color = linkColor)}
-            >
-              {item.label}
-            </a>
-          ))}
+          {NAV.map((item) => {
+            const isActive =
+              (item.href === '/introduction' && pathname === '/introduction') ||
+              (item.href === '/gallery' && pathname === '/gallery');
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                style={{
+                  fontFamily: 'var(--font-inter)',
+                  fontSize: '0.78rem',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: isActive ? linkHover : linkColor,
+                  textDecoration: 'none',
+                  transition: 'color 0.2s',
+                  textShadow: overHero ? '0 1px 12px rgba(0,0,0,0.22)' : 'none',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = linkHover)}
+                onMouseLeave={(e) => (e.currentTarget.style.color = isActive ? linkHover : linkColor)}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
 
         <div className="hidden md:flex items-center gap-4">
@@ -116,7 +121,7 @@ export default function Navbar() {
                 </Link>
               )}
               <Link
-                href="/dashboard"
+                href="/dashboard/family-book"
                 className="px-5 py-2 text-xs tracking-widest uppercase transition-all duration-300"
                 style={{
                   fontFamily: 'var(--font-inter)',
@@ -228,8 +233,12 @@ export default function Navbar() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {NAV.map((item) => (
-              <a
+            {NAV.map((item) => {
+              const isActive =
+                (item.href === '/introduction' && pathname === '/introduction') ||
+                (item.href === '/gallery' && pathname === '/gallery');
+              return (
+              <Link
                 key={item.label}
                 href={item.href}
                 onClick={() => setMenuOpen(false)}
@@ -238,15 +247,17 @@ export default function Navbar() {
                   fontSize: '0.85rem',
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
-                  color: 'rgba(15,42,31,0.65)',
+                  color: isActive ? '#0F2A1F' : 'rgba(15,42,31,0.65)',
                   textDecoration: 'none',
+                  fontWeight: isActive ? 600 : 400,
                 }}
               >
                 {item.label}
-              </a>
-            ))}
+              </Link>
+              );
+            })}
             <Link
-              href={user ? '/dashboard' : '/login'}
+              href={user ? '/dashboard/family-book' : '/login'}
               onClick={() => setMenuOpen(false)}
               className="py-3 text-center text-xs tracking-widest uppercase"
               style={{

@@ -3,16 +3,37 @@
 import Link from 'next/link';
 
 const NAV_LINKS = [
-  { label: 'Values',   href: '#values'   },
-  { label: 'Timeline', href: '#timeline' },
-  { label: 'Gallery',  href: '#gallery'  },
-  { label: 'Legacy',   href: '#legacy'   },
-  { label: 'Contact',  href: '#contact'  },
-  { label: 'Faith',    href: '#faith'    },
+  { label: 'Introduction', href: '/introduction' },
+  { label: 'Gallery', href: '/gallery' },
+  { label: 'Contact', href: '/#contact' },
 ];
 
 export default function Footer() {
   const year = new Date().getFullYear();
+
+  const headingStyle = {
+    fontFamily: 'var(--font-inter)',
+    fontSize: '0.65rem',
+    letterSpacing: '0.35em',
+    textTransform: 'uppercase',
+    color: 'rgba(168, 196, 180,0.85)',
+    marginBottom: '1.4rem',
+  };
+
+  const linkStyle = {
+    fontFamily: 'var(--font-inter)',
+    fontSize: '0.875rem',
+    color: 'rgba(255,247,237,0.65)',
+    textDecoration: 'none',
+    transition: 'color 0.2s',
+  };
+
+  const onEnter = (e) => {
+    e.currentTarget.style.color = '#A8C4B4';
+  };
+  const onLeave = (e) => {
+    e.currentTarget.style.color = 'rgba(255,247,237,0.65)';
+  };
 
   return (
     <footer
@@ -24,7 +45,8 @@ export default function Footer() {
       }}
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 mb-12">
+          {/* Brand + about */}
           <div>
             <Link href="/" className="block mb-4" style={{ textDecoration: 'none' }}>
               <span
@@ -59,82 +81,23 @@ export default function Footer() {
                 fontSize: '0.825rem',
                 color: 'rgba(255,247,237,0.62)',
                 lineHeight: 1.8,
-                maxWidth: 240,
+                maxWidth: 280,
               }}
             >
-              A living legacy of unity, warmth, and tradition — shared across generations.
+              A living legacy of unity, warmth, and tradition — rooted in Adayal and shared
+              across generations of the Perinba Vilas family.
             </p>
           </div>
 
+          {/* Site navigation */}
           <div>
-            <h4
-              style={{
-                fontFamily: 'var(--font-inter)',
-                fontSize: '0.65rem',
-                letterSpacing: '0.35em',
-                textTransform: 'uppercase',
-                color: 'rgba(168, 196, 180,0.85)',
-                marginBottom: '1.4rem',
-              }}
-            >
-              Explore
-            </h4>
-            <ul className="flex flex-col gap-3">
+            <h4 style={headingStyle}>Navigation</h4>
+            <ul className="flex flex-col gap-3 mb-8">
               {NAV_LINKS.map((l) => (
                 <li key={l.label}>
-                  <a
-                    href={l.href}
-                    style={{
-                      fontFamily: 'var(--font-inter)',
-                      fontSize: '0.875rem',
-                      color: 'rgba(255,247,237,0.65)',
-                      textDecoration: 'none',
-                      transition: 'color 0.2s',
-                    }}
-                    onMouseEnter={(e) => (e.target.style.color = '#A8C4B4')}
-                    onMouseLeave={(e) => (e.target.style.color = 'rgba(255,247,237,0.65)')}
-                  >
+                  <a href={l.href} style={linkStyle} onMouseEnter={onEnter} onMouseLeave={onLeave}>
                     {l.label}
                   </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4
-              style={{
-                fontFamily: 'var(--font-inter)',
-                fontSize: '0.65rem',
-                letterSpacing: '0.35em',
-                textTransform: 'uppercase',
-                color: 'rgba(168, 196, 180,0.85)',
-                marginBottom: '1.4rem',
-              }}
-            >
-              Family Members
-            </h4>
-            <ul className="flex flex-col gap-3 mb-8">
-              {[
-                { label: 'Sign In',       href: '/login'            },
-                { label: 'Dashboard',     href: '/dashboard'        },
-                { label: 'Family Portal', href: '/dashboard/family' },
-              ].map((l) => (
-                <li key={l.label}>
-                  <Link
-                    href={l.href}
-                    style={{
-                      fontFamily: 'var(--font-inter)',
-                      fontSize: '0.875rem',
-                      color: 'rgba(255,247,237,0.65)',
-                      textDecoration: 'none',
-                      transition: 'color 0.2s',
-                    }}
-                    onMouseEnter={(e) => (e.target.style.color = '#A8C4B4')}
-                    onMouseLeave={(e) => (e.target.style.color = 'rgba(255,247,237,0.65)')}
-                  >
-                    {l.label}
-                  </Link>
                 </li>
               ))}
             </ul>
@@ -162,9 +125,28 @@ export default function Footer() {
           <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(255,247,237,0.4)' }}>
             © {year} Perinba Vilas Family Heritage. All rights reserved.
           </p>
-          <span className="gold-rule" style={{ width: 40 }} />
           <p style={{ fontFamily: 'var(--font-inter)', fontSize: '0.75rem', color: 'rgba(255,247,237,0.35)' }}>
-            A family, forever connected.
+            Powered by{' '}
+            <a
+              href="https://www.joybps.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'rgba(168, 196, 180, 0.9)',
+                textDecoration: 'none',
+                letterSpacing: '0.04em',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#A8C4B4';
+                e.currentTarget.style.textDecoration = 'underline';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(168, 196, 180, 0.9)';
+                e.currentTarget.style.textDecoration = 'none';
+              }}
+            >
+              JoyBPS
+            </a>
           </p>
         </div>
       </div>

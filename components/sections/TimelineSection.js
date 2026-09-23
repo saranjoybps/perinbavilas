@@ -8,108 +8,196 @@ import SectionDecor from '@/components/ui/SectionDecor';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const MILESTONES = [
+/**
+ * Family journey cards (text only — no photos).
+ * First entry = founding parents; rest = their seven children.
+ */
+const BRANCHES = [
   {
-    year:  'Origins',
-    label: 'The Beginning',
-    desc:  'Deep in the Tamil heartland, the Perinba Vilas family took root — a name built on faith, hard work, and deep community bonds.',
-    color: '#EBF7FD',
+    id: 'root',
+    role: 'The Founding Family',
+    isRoot: true,
+    name: 'Y. Perinbam Nadar',
+    born: '1872',
+    died: '16-05-1956',
+    spouse: 'Annammal Perinbam',
+    spouseBorn: '1886',
+    spouseDied: '02-01-1949',
+    children: 7,
   },
   {
-    year:  'Growth',
-    label: 'Branching Out',
-    desc:  'Sons and daughters ventured into new cities and trades, carrying the family spirit wherever they settled, planting new roots.',
-    color: '#F0F9FF',
+    id: '1',
+    role: 'Their Children',
+    isRoot: false,
+    name: 'C. Annamani Ammal',
+    born: '1908',
+    died: '1987',
+    spouse: 'Chelliah Nadar',
+    spouseRelation: 'Wife of',
+    children: 4,
   },
   {
-    year:  'Expansion',
-    label: 'Across the Land',
-    desc:  'Marriages, celebrations, and milestones wove a rich tapestry — the family grew not just in number but in depth and story.',
-    color: '#FFF7ED',
+    id: '2',
+    role: 'Their Children',
+    isRoot: false,
+    name: 'Annapoomani Ammal',
+    born: '06-01-1910',
+    died: '04-01-1993',
+    spouse: 'Iyyadurai Nadar',
+    spouseRelation: 'Wife of',
+    children: 4,
   },
   {
-    year:  'Today',
-    label: 'Modern Legacy',
-    desc:  'Engineers, doctors, artists, farmers — one family across many professions, united by shared values and a common name.',
-    color: '#F8FAFC',
+    id: '3',
+    role: 'Their Children',
+    isRoot: false,
+    name: 'P. Rajamani Abraham Nadar',
+    born: '14-03-1913',
+    died: '25-03-1972',
+    spouse: 'R. Ranjitham Ammal',
+    spouseRelation: 'Husband of',
+    children: 5,
   },
   {
-    year:  'Future',
-    label: 'Carrying Forward',
-    desc:  'The next generation inherits not just a name, but a living legacy of resilience, love, and belonging.',
-    color: '#FFFBF7',
+    id: '4',
+    role: 'Their Children',
+    isRoot: false,
+    name: 'Jothirathinamani Ammal',
+    born: '27-07-1916',
+    died: '05-05-1982',
+    spouse: 'Sathiavakku Nadar',
+    spouseRelation: 'Wife of',
+    children: 7,
+  },
+  {
+    id: '5',
+    role: 'Their Children',
+    isRoot: false,
+    name: 'P. Rajasigamani Nadar',
+    born: '15-10-1917',
+    died: '24-08-1981',
+    spouse: 'R. Janaki Ammal & R. Alice Ammal',
+    spouseRelation: 'Husband of',
+    children: 6,
+  },
+  {
+    id: '6',
+    role: 'Their Children',
+    isRoot: false,
+    name: 'P. Palpandian Nadar',
+    born: '22-11-1920',
+    died: '10-08-1984',
+    spouse: 'P. Suganthy Ammal',
+    spouseRelation: 'Husband of',
+    children: 9,
+  },
+  {
+    id: '7',
+    role: 'Their Children',
+    isRoot: false,
+    name: 'P. Duraipandian Nadar',
+    born: '22-10-1922',
+    died: '09-09-1997',
+    spouse: 'D. Pushpam Ammal',
+    spouseRelation: 'Husband of',
+    children: 6,
   },
 ];
 
-function TimelineItem({ m, index }) {
+function BranchCard({ branch }) {
+  const isRoot = branch.isRoot;
+
+  const story = isRoot
+    ? `${branch.name} was born in ${branch.born} and departed this life on ${branch.died}. Together with his beloved wife ${branch.spouse} — born in ${branch.spouseBorn} and laid to rest on ${branch.spouseDied} — they laid the foundation of the Perinba Vilas family and raised seven children who carried their name forward.`
+    : `${branch.name} was born on ${branch.born} and passed away on ${branch.died}. ${
+        branch.spouseRelation === 'Wife of'
+          ? `She was the wife of ${branch.spouse}`
+          : `He was the husband of ${branch.spouse}`
+      }, and together they were blessed with ${branch.children} ${branch.children === 1 ? 'child' : 'children'}.`;
+
+  return (
+    <div
+      className="glass-warm shadow-cloud p-7 sm:p-9 max-w-md w-full mx-auto md:mx-0"
+      style={{
+        borderLeft: isRoot
+          ? '4px solid #0F2A1F'
+          : '3px solid rgba(26, 61, 46, 0.45)',
+        borderTop: '1px solid rgba(255,255,255,0.7)',
+        background: isRoot
+          ? 'linear-gradient(165deg, rgba(15,42,31,0.06) 0%, rgba(255,255,255,0.92) 55%)'
+          : undefined,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-inter)',
+          fontSize: '0.62rem',
+          letterSpacing: '0.22em',
+          textTransform: 'uppercase',
+          color: isRoot ? '#0F2A1F' : 'rgba(15,42,31,0.5)',
+          display: 'block',
+          marginBottom: '0.65rem',
+        }}
+      >
+        {branch.role}
+      </span>
+
+      <h3
+        style={{
+          fontFamily: 'var(--font-cormorant)',
+          fontSize: isRoot ? 'clamp(1.45rem, 3vw, 1.75rem)' : '1.45rem',
+          fontWeight: 500,
+          color: '#0F2A1F',
+          marginBottom: '0.9rem',
+          lineHeight: 1.25,
+        }}
+      >
+        {branch.name}
+      </h3>
+
+      <p
+        style={{
+          fontFamily: 'var(--font-cormorant)',
+          fontStyle: 'italic',
+          fontSize: 'clamp(1.05rem, 2.2vw, 1.2rem)',
+          lineHeight: 1.7,
+          color: 'rgba(15,42,31,0.72)',
+          margin: 0,
+        }}
+      >
+        {story}
+      </p>
+    </div>
+  );
+}
+
+function TimelineItem({ branch, index }) {
   const isEven = index % 2 === 0;
 
   return (
     <div
       className={`timeline-item relative flex items-start gap-8 ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'} flex-col`}
     >
-      {/* Content card — even items right-align within their flex-1 to sit near centre line */}
       <div className={`timeline-card flex-1 ${isEven ? 'md:flex md:justify-end' : ''}`}>
-        <div
-          className="glass-warm shadow-cloud p-7 sm:p-9 max-w-md w-full mx-auto md:mx-0"
-          style={{
-            borderLeft: '3px solid rgba(26, 61, 46,0.5)',
-            borderTop: '1px solid rgba(255,255,255,0.7)',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: 'var(--font-cormorant)',
-              fontSize: '0.7rem',
-              letterSpacing: '0.35em',
-              textTransform: 'uppercase',
-              color: '#0F2A1F',
-              display: 'block',
-              marginBottom: '0.6rem',
-            }}
-          >
-            {m.year}
-          </span>
-          <h3
-            style={{
-              fontFamily: 'var(--font-cormorant)',
-              fontSize: '1.5rem',
-              fontWeight: 500,
-              color: '#0F2A1F',
-              marginBottom: '0.75rem',
-            }}
-          >
-            {m.label}
-          </h3>
-          <p
-            style={{
-              fontFamily: 'var(--font-inter)',
-              fontSize: '0.95rem',
-              lineHeight: 1.8,
-              color: 'rgba(15,42,31,0.58)',
-            }}
-          >
-            {m.desc}
-          </p>
-        </div>
+        <BranchCard branch={branch} />
       </div>
 
-      {/* Center node */}
       <div
         className="timeline-node hidden md:flex items-center justify-center w-10 h-10 flex-shrink-0 z-10 self-start mt-8"
       >
         <div
           style={{
-            width: 14,
-            height: 14,
+            width: branch.isRoot ? 18 : 14,
+            height: branch.isRoot ? 18 : 14,
             borderRadius: '50%',
             background: '#1A3D2E',
-            boxShadow: '0 0 0 6px rgba(26, 61, 46,0.18), 0 0 20px rgba(26, 61, 46,0.3)',
+            boxShadow: branch.isRoot
+              ? '0 0 0 7px rgba(26, 61, 46,0.22), 0 0 24px rgba(26, 61, 46,0.35)'
+              : '0 0 0 6px rgba(26, 61, 46,0.18), 0 0 20px rgba(26, 61, 46,0.3)',
           }}
         />
       </div>
 
-      {/* Spacer */}
       <div className="hidden md:block flex-1" />
     </div>
   );
@@ -117,7 +205,7 @@ function TimelineItem({ m, index }) {
 
 export default function TimelineSection() {
   const sectionRef = useRef(null);
-  const lineRef    = useRef(null);
+  const lineRef = useRef(null);
 
   useGSAP(() => {
     gsap.fromTo(
@@ -203,35 +291,29 @@ export default function TimelineSection() {
       className="relative overflow-hidden"
       style={{
         paddingTop: 'clamp(3.5rem, 8vw, 6.5rem)',
-        // Extra bottom room on phones so the floral sits clear of the last card
-        paddingBottom: 'clamp(10rem, 32vw, 11rem)',
+        paddingBottom: 'clamp(8.5rem, 28vw, 12rem)',
       }}
     >
-      <SectionDecor position="bottom-left" />
+      <SectionDecor
+        position="bottom-left"
+        size="lg"
+        className="!w-[200px] sm:!w-[270px] md:!w-[320px] lg:!w-[400px] !bottom-0"
+        style={{ transform: 'translate(-8%, 18%)', opacity: 0.58 }}
+      />
 
-      {/* Vertical timeline line — desktop only, drawn via GSAP scrub */}
       <div
         ref={lineRef}
         className="hidden md:block absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px pointer-events-none"
         style={{
-          background: 'linear-gradient(to bottom, transparent 5%, rgba(26, 61, 46,0.3) 20%, rgba(26, 61, 46,0.3) 80%, transparent 95%)',
+          background:
+            'linear-gradient(to bottom, transparent 5%, rgba(26, 61, 46,0.3) 20%, rgba(26, 61, 46,0.3) 80%, transparent 95%)',
           zIndex: 0,
         }}
         aria-hidden="true"
       />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-12" style={{ zIndex: 1 }}>
-        {/* Header */}
         <div className="timeline-header mb-8 text-center sm:mb-12 md:mb-16">
-          <div className="mb-3 flex items-center justify-center gap-4 sm:mb-5">
-            <span
-              className="text-xs tracking-[0.4em] uppercase"
-              style={{ fontFamily: 'var(--font-inter)', color: '#0F2A1F' }}
-            >
-              Through Time
-            </span>
-          </div>
-
           <h2
             style={{
               fontFamily: 'var(--font-cormorant)',
@@ -243,12 +325,24 @@ export default function TimelineSection() {
             Our{' '}
             <em style={{ fontStyle: 'italic', color: '#0F2A1F' }}>Journey</em>
           </h2>
+
+          <p
+            style={{
+              fontFamily: 'var(--font-inter)',
+              fontSize: '1rem',
+              color: 'rgba(15,42,31,0.5)',
+              maxWidth: 460,
+              lineHeight: 1.7,
+              margin: '1rem auto 0',
+            }}
+          >
+            From the founding parents of Perinba Vilas to the seven children who carried their love and name into the years ahead.
+          </p>
         </div>
 
-        {/* Timeline items */}
         <div className="flex flex-col gap-7 sm:gap-10 md:gap-16">
-          {MILESTONES.map((m, i) => (
-            <TimelineItem key={m.year} m={m} index={i} />
+          {BRANCHES.map((branch, i) => (
+            <TimelineItem key={branch.id} branch={branch} index={i} />
           ))}
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { serializeDoc, errorResponse, verifyAuth } from '@/lib/api-helpers';
-import { sendWelcomeEmail } from '@/lib/email';
+import { sendWelcomeEmailWithRetry } from '@/lib/email';
+import { resolveDisplayName } from '@/lib/user-import';
 
 const ROLE_OPTIONS = ['member', 'admin'];
 
@@ -83,16 +84,39 @@ export async function POST(request) {
       await requireAdmin(request);
 
       const cleanEmail = String(email || '').trim().toLowerCase();
-      const cleanName = String(displayName || name || '').trim();
       const cleanPassword = String(password || '');
       const cleanCode = String(code || '').trim();
 
-      if (!cleanEmail || !cleanName || !cleanPassword) {
-        return NextResponse.json({ error: 'email, name, and temporary password are required' }, { status: 400 });
+      if (!cleanEmail || !cleanPassword) {
+        return NextResponse.json({ error: 'email and temporary password are required' }, { status: 400 });
       }
 
       if (cleanPassword.length < 6) {
         return NextResponse.json({ error: 'Temporary password must be at least 6 characters' }, { status: 400 });
+      }
+
+      const { displayName: cleanName, source: nameSource } = await resolveDisplayName({
+        displayName,
+        name,
+        email: cleanEmail,
+        code: cleanCode,
+      });
+
+      // Invite first — do not create Auth/Firestore user unless email succeeds
+      try {
+        await sendWelcomeEmailWithRetry({
+          email: cleanEmail,
+          displayName: cleanName,
+          password: cleanPassword,
+        });
+      } catch (mailErr) {
+        console.error('Invite email failed; user was not created:', mailErr);
+        return NextResponse.json(
+          {
+            error: `Invite email failed — user was not created: ${mailErr?.message || 'SMTP error'}`,
+          },
+          { status: 502 },
+        );
       }
 
       const authUser = await adminAuth.createUser({
@@ -113,6 +137,8 @@ export async function POST(request) {
             role,
             code: cleanCode,
           }),
+          nameSource,
+          inviteEmailedAt: now,
           createdAt: now,
           updatedAt: now,
         };
@@ -132,18 +158,16 @@ export async function POST(request) {
         batch.set(adminDb.collection('authentication').doc(authUser.uid), authData, { merge: true });
         await batch.commit();
 
-        sendWelcomeEmail({
-          email: cleanEmail,
-          displayName: cleanName,
-          password: cleanPassword,
-        }).catch((err) => {
-          console.error('Failed to send welcome email:', err);
-        });
-
         return NextResponse.json({ id: authUser.uid, ...userData }, { status: 201 });
       } catch (err) {
         await adminAuth.deleteUser(authUser.uid).catch(() => {});
-        throw err;
+        console.error('CRITICAL: invite sent but account create failed:', err);
+        return NextResponse.json(
+          {
+            error: `Invite email was sent, but account could not be created: ${err?.message || 'unknown error'}. The member already has the invite — retry creating this user carefully.`,
+          },
+          { status: 500 },
+        );
       }
     }
 

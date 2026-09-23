@@ -19,10 +19,12 @@ export async function PATCH(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    await adminDb.collection('gallery').doc(id).update({
-      ...body,
-      updatedAt: new Date(),
-    });
+    const updates = { updatedAt: new Date() };
+    if (typeof body.status === 'string') updates.status = body.status;
+    if (typeof body.caption === 'string') updates.caption = body.caption;
+    if (typeof body.showOnHome === 'boolean') updates.showOnHome = body.showOnHome;
+
+    await adminDb.collection('gallery').doc(id).update(updates);
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -30,8 +32,9 @@ export async function PATCH(request, { params }) {
   }
 }
 
-export async function DELETE(_, { params }) {
+export async function DELETE(request, { params }) {
   try {
+    await requireAdmin(request);
     const { id } = await params;
     await adminDb.collection('gallery').doc(id).delete();
     return NextResponse.json({ success: true });

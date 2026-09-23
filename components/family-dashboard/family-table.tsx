@@ -30,14 +30,14 @@ const codeBadge = {
   fontSize: '0.68rem',
   letterSpacing: '0.08em',
   padding: '0.2rem 0.55rem',
-  background: 'rgba(196,155,26,0.08)',
-  color: '#C49B1A',
-  border: '1px solid rgba(196,155,26,0.2)',
+  background: 'rgba(15, 42, 31,0.08)',
+  color: '#0F2A1F',
+  border: '1px solid rgba(15, 42, 31,0.2)',
 };
 
 const actionBtn = {
   background: 'transparent',
-  border: '1px solid rgba(212,175,55,0.2)',
+  border: '1px solid rgba(15, 42, 31,0.2)',
   padding: '0.35rem 0.5rem',
   cursor: 'pointer',
   color: 'rgba(26,16,8,0.45)',
@@ -70,7 +70,7 @@ export function FamilyTable({ records, onEdit, onView, onDelete, sortField, sort
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
+            <tr style={{ borderBottom: '1px solid rgba(15, 42, 31,0.2)' }}>
               <SortTh field="code">Code</SortTh>
               <SortTh field="name">Name</SortTh>
               <th style={thStyle}>Spouse</th>
@@ -89,8 +89,8 @@ export function FamilyTable({ records, onEdit, onView, onDelete, sortField, sort
               </tr>
             ) : (
               records.map((record) => (
-                <tr key={record.code} style={{ borderBottom: '1px solid rgba(212,175,55,0.08)', transition: 'background 0.15s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(196,155,26,0.03)'; }}
+                <tr key={record.code} style={{ borderBottom: '1px solid rgba(15, 42, 31,0.08)', transition: 'background 0.15s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15, 42, 31,0.03)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <td style={tdStyle}><span style={codeBadge}>{record.code}</span></td>
@@ -107,21 +107,21 @@ export function FamilyTable({ records, onEdit, onView, onDelete, sortField, sort
                         style={actionBtn}
                         title="View"
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(90,143,170,0.1)'; e.currentTarget.style.borderColor = 'rgba(90,143,170,0.3)'; e.currentTarget.style.color = '#5A8FAA'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(212,175,55,0.2)'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(15, 42, 31,0.2)'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; }}
                         onClick={() => onView(record)}
                       >◎</button>
                       <button
                         style={actionBtn}
                         title="Edit"
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(196,155,26,0.1)'; e.currentTarget.style.borderColor = 'rgba(196,155,26,0.3)'; e.currentTarget.style.color = '#C49B1A'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(212,175,55,0.2)'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15, 42, 31,0.1)'; e.currentTarget.style.borderColor = 'rgba(15, 42, 31,0.3)'; e.currentTarget.style.color = '#0F2A1F'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(15, 42, 31,0.2)'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; }}
                         onClick={() => onEdit(record)}
                       >◇</button>
                       <button
                         style={actionBtn}
                         title="Delete"
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(176,48,48,0.1)'; e.currentTarget.style.borderColor = 'rgba(176,48,48,0.3)'; e.currentTarget.style.color = '#b03030'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(212,175,55,0.2)'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(15, 42, 31,0.2)'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; }}
                         onClick={() => onDelete(record)}
                       >✕</button>
                     </div>

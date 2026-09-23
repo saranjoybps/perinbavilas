@@ -187,8 +187,8 @@ export default function ProfilePage() {
 
             <div>
               <p style={sectionTitle}>Children ({children.length})</p>
-              <div style={{ overflow: 'hidden', border: '1px solid rgba(26, 61, 46,0.12)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div className="overflow-x-auto -mx-1 px-1" style={{ border: '1px solid rgba(26, 61, 46,0.12)' }}>
+                <table style={{ width: '100%', minWidth: 320, borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(26, 61, 46,0.2)' }}>
                       {['Code', 'Name', 'DOB', 'DOD'].map((h) => (

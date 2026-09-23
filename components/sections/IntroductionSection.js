@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import Link from 'next/link';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -12,7 +13,7 @@ export default function IntroductionSection() {
 
   useGSAP(() => {
     gsap.fromTo(
-      '.intro-header, .intro-body',
+      '.intro-header, .intro-body, .intro-cta',
       { opacity: 0, y: 24 },
       {
         opacity: 1,
@@ -41,14 +42,15 @@ export default function IntroductionSection() {
         paddingBottom: 'clamp(5rem, 14vw, 9rem)',
       }}
     >
+      {/* Left floral — keep soft so body text stays readable */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/decorative-2.png"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none select-none absolute top-1 left-0 z-0 w-[210px] sm:w-[250px] md:w-[280px] lg:w-[340px]"
+        className="pointer-events-none select-none absolute top-1 left-0 z-0 w-[145px] sm:w-[220px] md:w-[320px] lg:w-[390px]"
         style={{
-          opacity: 0.62,
+          opacity: 0.35,
           transform: 'translate(-6%, -2%) scaleX(-1)',
         }}
       />
@@ -58,24 +60,15 @@ export default function IntroductionSection() {
         src="/book.png"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none select-none absolute bottom-0 right-0 z-0 w-[160px] sm:w-[200px] md:w-[260px] lg:w-[320px]"
+        className="pointer-events-none select-none absolute bottom-0 right-0 z-0 w-[130px] sm:w-[200px] md:w-[260px] lg:w-[320px]"
         style={{
-          opacity: 0.88,
-          transform: 'translate(8%, 6%)',
+          opacity: 0.82,
+          transform: 'translate(6%, 4%)',
         }}
       />
 
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-12" style={{ zIndex: 1 }}>
         <div className="intro-header mb-8 text-center sm:mb-10">
-          <div className="mb-3 flex items-center justify-center gap-4 sm:mb-5">
-            <span
-              className="text-xs tracking-[0.4em] uppercase"
-              style={{ fontFamily: 'var(--font-inter)', color: '#0F2A1F' }}
-            >
-              Our Beginning
-            </span>
-          </div>
-
           <h2
             style={{
               fontFamily: 'var(--font-cormorant)',
@@ -117,6 +110,33 @@ export default function IntroductionSection() {
             house in Colombo. The same spirit later grew into the Perinba Vilas
             family of today, rooted in one home, one church, and one shared name.
           </p>
+        </div>
+
+        <div className="intro-cta relative mt-10 flex justify-center sm:mt-12" style={{ zIndex: 2 }}>
+          <Link
+            href="/introduction"
+            className="inline-block px-8 py-3.5 text-xs tracking-widest uppercase transition-all duration-300"
+            style={{
+              fontFamily: 'var(--font-inter)',
+              border: '1px solid rgba(15, 42, 31, 0.5)',
+              color: '#0F2A1F',
+              textDecoration: 'none',
+              letterSpacing: '0.14em',
+              background: 'rgba(255,255,255,0.92)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#0F2A1F';
+              e.currentTarget.style.color = '#FFF7ED';
+              e.currentTarget.style.borderColor = '#0F2A1F';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.92)';
+              e.currentTarget.style.color = '#0F2A1F';
+              e.currentTarget.style.borderColor = 'rgba(15, 42, 31, 0.5)';
+            }}
+          >
+            Read Full Introduction
+          </Link>
         </div>
       </div>
     </section>

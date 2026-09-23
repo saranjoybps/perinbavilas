@@ -12,7 +12,7 @@ const btnStyle = {
   letterSpacing: '0.12em',
   textTransform: 'uppercase' as const,
   padding: '0.55rem 1.2rem',
-  border: '1px solid rgba(196,155,26,0.3)',
+  border: '1px solid rgba(15, 42, 31,0.3)',
   background: 'transparent',
   color: 'rgba(26,16,8,0.45)',
   cursor: 'pointer',
@@ -30,8 +30,8 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
           style={btnStyle}
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          onMouseEnter={(e) => { if (!e.currentTarget.disabled) { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; e.currentTarget.style.borderColor = '#C49B1A'; } }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; e.currentTarget.style.borderColor = 'rgba(196,155,26,0.3)'; }}
+          onMouseEnter={(e) => { if (!e.currentTarget.disabled) { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; e.currentTarget.style.borderColor = '#0F2A1F'; } }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; e.currentTarget.style.borderColor = 'rgba(15, 42, 31,0.3)'; }}
         >
           ← Previous
         </button>
@@ -39,8 +39,8 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
           style={btnStyle}
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-          onMouseEnter={(e) => { if (!e.currentTarget.disabled) { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; e.currentTarget.style.borderColor = '#C49B1A'; } }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; e.currentTarget.style.borderColor = 'rgba(196,155,26,0.3)'; }}
+          onMouseEnter={(e) => { if (!e.currentTarget.disabled) { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; e.currentTarget.style.borderColor = '#0F2A1F'; } }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,16,8,0.45)'; e.currentTarget.style.borderColor = 'rgba(15, 42, 31,0.3)'; }}
         >
           Next →
         </button>

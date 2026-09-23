@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import * as XLSX from 'xlsx';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { formatName } from '@/lib/formatters';
+import { MAX_BULK_USERS, RECOMMENDED_BULK_USERS, nameFromEmail } from '@/lib/user-import-shared';
 
 const ROLE_OPTIONS = ['member', 'admin'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,6 +21,8 @@ const COLUMN_MAP = {
   displayname: 'name',
   password: 'password',
   pass: 'password',
+  'temp password': 'password',
+  'temporary password': 'password',
   role: 'role',
   code: 'code',
   'family code': 'code',
@@ -27,10 +30,10 @@ const COLUMN_MAP = {
 };
 
 const TEMPLATE_ROWS = [
-  ['email', 'name', 'password', 'role', 'code'],
-  ['member1@example.com', 'Anita Perinbam', 'TempPass123', 'member', '1/2'],
-  ['member2@example.com', 'David Kumar', 'TempPass123', 'member', '1/3'],
-  ['admin.helper@example.com', 'Sarah Admin', 'TempPass123', 'admin', ''],
+  ['email', 'password', 'role', 'code'],
+  ['member1@example.com', 'TempPass123', 'member', '1/2'],
+  ['member2@example.com', 'TempPass123', 'member', '1/3'],
+  ['admin.helper@example.com', 'TempPass123', 'admin', ''],
 ];
 
 function normalizeImportRole(role) {
@@ -47,24 +50,23 @@ function parseExcelRows(rows) {
   const headerRow = rows[0].map((h) => String(h ?? '').trim().toLowerCase());
   const cols = headerRow.map((h) => COLUMN_MAP[h] || null);
   const hasEmail = cols.includes('email');
-  const hasName = cols.includes('name');
   const hasPassword = cols.includes('password');
 
-  if (!hasEmail || !hasName || !hasPassword) {
+  if (!hasEmail || !hasPassword) {
     return {
       users: [],
-      parseError: 'Required columns missing. Use headers: email, name, password, role, code',
+      parseError: 'Required columns missing. Use headers: email, password, role, code (name is optional)',
     };
   }
 
   const seenEmails = new Set();
   const users = [];
 
-  rows.slice(1).forEach((row, idx) => {
+  rows.slice(1).forEach((row) => {
     const isEmpty = !row || row.every((cell) => cell == null || String(cell).trim() === '');
     if (isEmpty) return;
 
-    const user = { email: '', name: '', password: '', role: 'member', code: '', issues: [] };
+    const user = { email: '', name: '', password: '', role: 'member', code: '', issues: [], nameHint: '' };
     cols.forEach((field, i) => {
       const val = row[i] != null ? String(row[i]).trim() : '';
       if (field) user[field] = val;
@@ -76,8 +78,6 @@ function parseExcelRows(rows) {
     if (!user.email) user.issues.push('missing email');
     else if (!EMAIL_RE.test(user.email)) user.issues.push('invalid email');
 
-    if (!user.name) user.issues.push('missing name');
-
     if (!user.password) user.issues.push('missing password');
     else if (user.password.length < 6) user.issues.push('password too short (min 6)');
 
@@ -87,11 +87,31 @@ function parseExcelRows(rows) {
       seenEmails.add(user.email);
     }
 
+    if (user.name) {
+      user.nameHint = 'from sheet';
+      user.nameProvided = true;
+    } else if (user.code) {
+      user.nameHint = 'from family code (server)';
+      user.name = `(via code ${user.code})`;
+      user.nameProvided = false;
+    } else {
+      user.nameHint = 'from email';
+      user.name = nameFromEmail(user.email);
+      user.nameProvided = false;
+    }
+
     users.push(user);
   });
 
   if (!users.length) {
     return { users: [], parseError: 'No data rows found in the spreadsheet.' };
+  }
+
+  if (users.length > MAX_BULK_USERS) {
+    return {
+      users: [],
+      parseError: `Too many rows (${users.length}). Import at most ${MAX_BULK_USERS} users per batch (recommended ${RECOMMENDED_BULK_USERS}).`,
+    };
   }
 
   return { users, parseError: '' };
@@ -177,9 +197,9 @@ export default function AdminUsersPage() {
     setError('');
     setMessage('');
     try {
-      const payload = parsedUsers.map(({ email, name, password, role, code }) => ({
+      const payload = parsedUsers.map(({ email, name, password, role, code, nameProvided }) => ({
         email,
-        name,
+        name: nameProvided ? name : '',
         password,
         role,
         code,
@@ -188,6 +208,11 @@ export default function AdminUsersPage() {
       setBulkResult(result);
       setParsedUsers([]);
       setFileName('');
+      if (result.created > 0 && result.emailFailed === 0 && result.failed === 0) {
+        setMessage(`Sent invites and created ${result.created} users.`);
+      } else if (result.created > 0) {
+        setMessage(`Created ${result.created} users. Review any rows that failed below.`);
+      }
       await load();
     } catch (err) {
       setBulkResult({
@@ -291,7 +316,7 @@ export default function AdminUsersPage() {
         code: form.code,
       });
       setForm({ email: '', displayName: '', password: '', role: 'member', code: '' });
-      setMessage('User created in authentication and users.');
+      setMessage('Invite email sent and user created.');
       await load();
     } catch (err) {
       setError(err.message || 'Failed to create user.');
@@ -405,14 +430,13 @@ export default function AdminUsersPage() {
             />
           </div>
           <div className="lg:col-span-2">
-            <label style={labelStyle}>Name</label>
+            <label style={labelStyle}>Name <span style={{ textTransform: 'none', letterSpacing: 0, color: 'rgba(26,16,8,0.35)' }}>(optional — uses family code or email)</span></label>
             <input
               type="text"
-              required
               value={form.displayName}
               onChange={(e) => setForm({ ...form, displayName: e.target.value })}
               style={inputStyle}
-              placeholder="Full name"
+              placeholder="Leave blank to use family code name"
             />
           </div>
           <div>
@@ -570,7 +594,9 @@ export default function AdminUsersPage() {
             marginTop: '0.4rem',
             marginBottom: 0,
           }}>
-            Required: email, name, password · Optional: role (member|admin), code (Family Code)
+            Required: email, password · Optional: role, code, name · Max {MAX_BULK_USERS}/batch (best ≤{RECOMMENDED_BULK_USERS})
+            <br />
+            Name is filled from family book via code when blank. Invite email is sent first — users are created only after the email succeeds.
           </p>
         </div>
 
@@ -581,12 +607,20 @@ export default function AdminUsersPage() {
             fontFamily: 'var(--font-inter)',
             fontSize: '0.78rem',
             border: '1px solid rgba(47,107,66,0.16)',
-            background: bulkResult.failed > 0 ? 'rgba(176,48,48,0.06)' : 'rgba(47,107,66,0.07)',
-            borderColor: bulkResult.failed > 0 ? 'rgba(176,48,48,0.16)' : 'rgba(47,107,66,0.16)',
-            color: bulkResult.failed > 0 ? '#b03030' : '#2f6b42',
+            background: (bulkResult.failed > 0 || bulkResult.emailFailed > 0) ? 'rgba(176,48,48,0.06)' : 'rgba(47,107,66,0.07)',
+            borderColor: (bulkResult.failed > 0 || bulkResult.emailFailed > 0) ? 'rgba(176,48,48,0.16)' : 'rgba(47,107,66,0.16)',
+            color: (bulkResult.failed > 0 || bulkResult.emailFailed > 0) ? '#b03030' : '#2f6b42',
           }}>
-            <strong>{bulkResult.created}</strong> created, <strong>{bulkResult.failed}</strong> failed
-            {bulkResult.errors.length > 0 && (
+            <strong>{bulkResult.created}</strong> created
+            {typeof bulkResult.emailed === 'number' && (
+              <> · <strong>{bulkResult.emailed}</strong> invites sent</>
+            )}
+            {typeof bulkResult.emailFailed === 'number' && bulkResult.emailFailed > 0 && (
+              <> · <strong>{bulkResult.emailFailed}</strong> invite failed</>
+            )}
+            {' · '}
+            <strong>{bulkResult.failed}</strong> failed
+            {bulkResult.errors?.length > 0 && (
               <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem' }}>
                 {bulkResult.errors.map((e, i) => (
                   <li key={i}>{e.email}: {e.error}</li>
@@ -613,7 +647,7 @@ export default function AdminUsersPage() {
                 <tr style={{ borderBottom: '1px solid rgba(26, 61, 46,0.2)' }}>
                   <th style={thStyle}>#</th>
                   <th style={thStyle}>Email</th>
-                  <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Name / source</th>
                   <th style={thStyle}>Password</th>
                   <th style={thStyle}>Role</th>
                   <th style={thStyle}>Code</th>
@@ -633,7 +667,14 @@ export default function AdminUsersPage() {
                     >
                       <td style={tdStyle}>{i + 1}</td>
                       <td style={tdStyle}>{u.email || '—'}</td>
-                      <td style={tdStyle}>{u.name || '—'}</td>
+                      <td style={tdStyle}>
+                        <span>{u.name || '—'}</span>
+                        {u.nameHint && (
+                          <span style={{ display: 'block', fontSize: '0.65rem', color: 'rgba(26,16,8,0.35)', marginTop: 2 }}>
+                            {u.nameHint}
+                          </span>
+                        )}
+                      </td>
                       <td style={tdStyle}>{u.password ? '••••••' : '—'}</td>
                       <td style={tdStyle}>{u.role}</td>
                       <td style={tdStyle}>{u.code || '—'}</td>

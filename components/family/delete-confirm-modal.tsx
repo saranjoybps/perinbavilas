@@ -53,9 +53,9 @@ const btnBase = {
   letterSpacing: '0.14em',
   textTransform: 'uppercase' as const,
   padding: '0.6rem 1.4rem',
-  border: '1px solid rgba(196,155,26,0.45)',
+  border: '1px solid rgba(15, 42, 31,0.45)',
   background: 'transparent',
-  color: '#C49B1A',
+  color: '#0F2A1F',
   cursor: 'pointer',
   transition: 'all 0.2s',
 };
@@ -154,13 +154,13 @@ export function DeleteConfirmModal({ record, open, onOpenChange, onDeleted }: De
               </p>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', paddingTop: '1rem', borderTop: '1px solid rgba(212,175,55,0.12)' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', paddingTop: '1rem', borderTop: '1px solid rgba(15, 42, 31,0.12)' }}>
               <button
                 type="button"
                 style={btnBase}
                 onClick={handleClose}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
               >
                 Cancel
               </button>
@@ -196,13 +196,13 @@ export function DeleteConfirmModal({ record, open, onOpenChange, onDeleted }: De
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', paddingTop: '1rem', borderTop: '1px solid rgba(212,175,55,0.12)' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', paddingTop: '1rem', borderTop: '1px solid rgba(15, 42, 31,0.12)' }}>
               <button
                 type="button"
                 style={btnBase}
                 onClick={handleClose}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
               >
                 Cancel
               </button>

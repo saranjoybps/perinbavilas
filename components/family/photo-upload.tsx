@@ -49,7 +49,7 @@ export function PhotoUpload({ photos, familyCode, onChange, onPendingUpload, onP
     <div>
       <div
         style={{
-          border: '2px dashed rgba(212,175,55,0.35)',
+          border: '2px dashed rgba(15, 42, 31,0.35)',
           borderRadius: '4px',
           padding: '2rem 1rem',
           textAlign: 'center',
@@ -60,7 +60,7 @@ export function PhotoUpload({ photos, familyCode, onChange, onPendingUpload, onP
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         onClick={() => fileInputRef.current?.click()}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(212,175,55,0.04)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15, 42, 31,0.04)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
       >
         <div style={{ fontFamily: 'var(--font-inter)', fontSize: '0.85rem', color: 'rgba(26,16,8,0.4)', marginBottom: '0.3rem' }}>
@@ -74,7 +74,7 @@ export function PhotoUpload({ photos, familyCode, onChange, onPendingUpload, onP
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginTop: '1rem' }}>
         {Array.from({ length: MAX_PHOTOS }).map((_, i) => (
-          <div key={i} style={{ aspectRatio: '1', borderRadius: '4px', border: '1px solid rgba(212,175,55,0.15)', background: 'rgba(255,255,255,0.5)', position: 'relative', overflow: 'hidden' }}>
+          <div key={i} style={{ aspectRatio: '1', borderRadius: '4px', border: '1px solid rgba(15, 42, 31,0.15)', background: 'rgba(255,255,255,0.5)', position: 'relative', overflow: 'hidden' }}>
             {photos[i] ? (
               <>
                 <img src={photos[i]} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

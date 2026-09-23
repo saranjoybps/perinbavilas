@@ -1,16 +1,17 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import LazyVideo from '@/components/ui/LazyVideo';
+import { cloudinaryPoster, cloudinaryVideo } from '@/lib/media';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const LEGACY_VIDEO =
-  'https://res.cloudinary.com/bsaqrrl4/video/upload/q_auto:eco,w_1920/v1790077273/7316616-uhd_3840_2160_25fps_hefohj.mp4';
-const LEGACY_POSTER =
-  'https://res.cloudinary.com/bsaqrrl4/video/upload/so_2,w_1600,q_auto,f_jpg/v1790077273/7316616-uhd_3840_2160_25fps_hefohj.jpg';
+const LEGACY_PATH = 'v1790077273/7316616-uhd_3840_2160_25fps_hefohj.mp4';
+const LEGACY_VIDEO = cloudinaryVideo(LEGACY_PATH, 1280);
+const LEGACY_POSTER = cloudinaryPoster(LEGACY_PATH, 1400);
 
 const QUOTE = 'More than a name, Perinba Vilas is a legacy carried forward with love and togetherness.';
 const QUOTE_WORDS = QUOTE.split(' ');
@@ -23,46 +24,44 @@ const accentStyle = {
 
 export default function LegacyStatement() {
   const sectionRef = useRef(null);
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = true;
-    video.playsInline = true;
-    const tryPlay = () => {
-      video.play().catch(() => {});
-    };
-    tryPlay();
-    video.addEventListener('loadeddata', tryPlay);
-    document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
-    return () => {
-      video.removeEventListener('loadeddata', tryPlay);
-      document.removeEventListener('touchstart', tryPlay);
-    };
-  }, []);
 
   useGSAP(() => {
-    const words = sectionRef.current.querySelectorAll('.word-token');
+    const section = sectionRef.current;
+    if (!section) return;
 
-    gsap.timeline({
+    const words = section.querySelectorAll('.word-token');
+
+    const tl = gsap.timeline({
       scrollTrigger: {
-        trigger: sectionRef.current,
+        trigger: section,
         start: 'top top',
         end: '+=1000',
-        scrub: 1.5,
+        scrub: 1.2,
         pin: true,
         pinSpacing: true,
         anticipatePin: 1,
+        invalidateOnRefresh: true,
+        // Match pin-spacer to section so scroll-back never flashes white/empty green
+        onRefresh: (self) => {
+          const spacer = self.pin?.parentNode;
+          if (spacer && spacer.classList?.contains('pin-spacer')) {
+            spacer.style.background = '#0F2A1F';
+          }
+        },
       },
-    }).from(words, {
-      opacity: 0,
-      y: 32,
-      filter: 'blur(8px)',
-      stagger: { each: 0.062 },
-      duration: 0.4,
-      ease: 'power3.out',
-    }, 0.05);
+    });
+
+    tl.from(
+      words,
+      {
+        opacity: 0,
+        y: 24,
+        stagger: { each: 0.055 },
+        duration: 0.35,
+        ease: 'power2.out',
+      },
+      0.05,
+    );
   }, { scope: sectionRef });
 
   return (
@@ -73,22 +72,15 @@ export default function LegacyStatement() {
       style={{
         minHeight: '100svh',
         background: '#0F2A1F',
+        zIndex: 5,
       }}
     >
-      <video
-        ref={videoRef}
+      <LazyVideo
+        src={LEGACY_VIDEO}
+        poster={LEGACY_POSTER}
         className="absolute inset-0 h-full w-full object-cover"
         style={{ zIndex: 0, pointerEvents: 'none' }}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        poster={LEGACY_POSTER}
-        aria-hidden="true"
-      >
-        <source src={LEGACY_VIDEO} type="video/mp4" />
-      </video>
+      />
 
       <div
         className="absolute inset-0 pointer-events-none"
@@ -151,7 +143,8 @@ export default function LegacyStatement() {
               display: 'block',
               width: 56,
               height: 1,
-              background: 'linear-gradient(90deg, transparent, rgba(168,196,180,0.85), transparent)',
+              background:
+                'linear-gradient(90deg, transparent, rgba(168,196,180,0.85), transparent)',
             }}
           />
           <span

@@ -31,7 +31,7 @@ function recordToFamilyRecord(doc: FirebaseFirestore.DocumentSnapshot): FamilyRe
   const spouseFields = normalizeSpouseFields(data.spouses, data.spouse);
 
   return {
-    code: data.code || doc.id,
+    code: String(data.code || doc.id.replace(/-/g, '/') || '').trim(),
     name: data.name || '',
     dob: data.dob || null,
     dod: data.dod || null,
@@ -45,7 +45,7 @@ function recordToFamilyRecord(doc: FirebaseFirestore.DocumentSnapshot): FamilyRe
     occupation: data.occupation || null,
     photos: data.photos || [],
     children: (data.children || []).map((c: Record<string, unknown>) => ({
-      code: c.code as string,
+      code: String(c.code ?? '').trim(),
       name: c.name as string,
       dob: (c.dob as string) || null,
       dod: (c.dod as string) || null,

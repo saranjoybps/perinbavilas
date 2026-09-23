@@ -5,6 +5,49 @@ import { FamilyRecord, FilterOptions, SortField, SortOrder, DashboardStats } fro
 import { getSpouses } from "@/lib/family-utils";
 import { getFamilies } from "@/lib/api";
 
+/** Normalize codes so `1/2` and `1-2` match the same search. */
+function normalizeFamilyCode(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "/");
+}
+
+/** True when the query looks like a family code (e.g. 1, 11, 1/2, 11-21). */
+function isCodeLikeQuery(query: string): boolean {
+  return /^[\d]+([/\-][\d]+)*$/.test(query.trim());
+}
+
+function recordMatchesCodeQuery(record: FamilyRecord, rawQuery: string): boolean {
+  const q = normalizeFamilyCode(rawQuery);
+  if (!q) return false;
+
+  const code = normalizeFamilyCode(record.code);
+  if (code === q) return true;
+
+  // Child listed under this family has this code
+  if ((record.children || []).some((c) => normalizeFamilyCode(c.code) === q)) {
+    return true;
+  }
+
+  // Prefix / branch match: query "11" matches "11", "111", "11/21"
+  if (code.startsWith(q)) {
+    const next = code.slice(q.length);
+    if (next === "" || /^\d/.test(next) || next.startsWith("/")) return true;
+  }
+
+  // Slash-code left side under this branch
+  const left = code.split("/")[0];
+  if (left !== code && (left === q || (left.startsWith(q) && /^\d/.test(left.slice(q.length) || "x")))) {
+    return true;
+  }
+
+  return (record.children || []).some((c) => {
+    const childCode = normalizeFamilyCode(c.code);
+    return childCode === q || childCode.startsWith(q);
+  });
+}
+
 export function useFamilies() {
   const [records, setRecords] = useState<FamilyRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,21 +82,35 @@ export function useFamilies() {
   }, [loadData]);
 
   const filteredRecords = useMemo(() => {
+    // API returns hierarchy order: 0 → branches 1–7 (level-order). Preserve that.
+    const hierarchyIndex = new Map(records.map((r, i) => [r.code, i]));
+
     let result = [...records];
     if (filters.search) {
-      const q = filters.search.toLowerCase();
-      result = result.filter(
-        (r) =>
-          r.code.toLowerCase().includes(q) ||
-          r.name.toLowerCase().includes(q) ||
-          getSpouses(r).some((s) => s.name.toLowerCase().includes(q)) ||
-          r.children.some((c) => c.name.toLowerCase().includes(q)) ||
-          (r.address || "").toLowerCase().includes(q) ||
-          (r.occupation || "").toLowerCase().includes(q) ||
-          r.cell_numbers.some((p) => p.toLowerCase().includes(q)) ||
-          (r.landline || "").toLowerCase().includes(q) ||
-          (r.email || "").toLowerCase().includes(q)
-      );
+      const raw = filters.search.trim();
+      const q = raw.toLowerCase();
+
+      if (isCodeLikeQuery(raw)) {
+        // Family-code search only — do not re-sort; keep hierarchy order
+        result = result.filter((r) => recordMatchesCodeQuery(r, raw));
+      } else {
+        result = result.filter(
+          (r) =>
+            normalizeFamilyCode(r.code).includes(q.replace(/-/g, "/")) ||
+            (r.name || "").toLowerCase().includes(q) ||
+            getSpouses(r).some((s) => (s.name || "").toLowerCase().includes(q)) ||
+            (r.children || []).some(
+              (c) =>
+                (c.name || "").toLowerCase().includes(q) ||
+                normalizeFamilyCode(c.code).includes(q.replace(/-/g, "/")),
+            ) ||
+            (r.address || "").toLowerCase().includes(q) ||
+            (r.occupation || "").toLowerCase().includes(q) ||
+            (r.cell_numbers || []).some((p) => String(p).toLowerCase().includes(q)) ||
+            (r.landline || "").toLowerCase().includes(q) ||
+            (r.email || "").toLowerCase().includes(q),
+        );
+      }
     }
     if (filters.hasPhotos === true) {
       result = result.filter((r) => (r.photos || []).length > 0);
@@ -71,25 +128,27 @@ export function useFamilies() {
     if (filters.childrenCountMax !== null) {
       result = result.filter((r) => r.children.length <= filters.childrenCountMax!);
     }
-    if (filters.sortField !== "file") {
-      if (filters.sortField === "code") {
-        if (filters.sortOrder === "desc") {
-          result = [...result].reverse();
+
+    if (filters.sortField === "code" || filters.sortField === "file") {
+      // Keep Family module hierarchy order; only reverse when user asks desc
+      result.sort((a, b) => {
+        const ai = hierarchyIndex.get(a.code) ?? Number.MAX_SAFE_INTEGER;
+        const bi = hierarchyIndex.get(b.code) ?? Number.MAX_SAFE_INTEGER;
+        return filters.sortOrder === "desc" ? bi - ai : ai - bi;
+      });
+    } else {
+      result.sort((a, b) => {
+        let cmp = 0;
+        switch (filters.sortField) {
+          case "name":
+            cmp = a.name.localeCompare(b.name);
+            break;
+          case "dob":
+            cmp = (a.dob || "").localeCompare(b.dob || "");
+            break;
         }
-      } else {
-        result.sort((a, b) => {
-          let cmp = 0;
-          switch (filters.sortField) {
-            case "name":
-              cmp = a.name.localeCompare(b.name);
-              break;
-            case "dob":
-              cmp = (a.dob || "").localeCompare(b.dob || "");
-              break;
-          }
-          return filters.sortOrder === "asc" ? cmp : -cmp;
-        });
-      }
+        return filters.sortOrder === "asc" ? cmp : -cmp;
+      });
     }
     return result;
   }, [records, filters]);

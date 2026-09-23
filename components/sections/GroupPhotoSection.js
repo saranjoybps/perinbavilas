@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import SectionDecor from '@/components/ui/SectionDecor';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -58,16 +59,13 @@ export default function GroupPhotoSection() {
         paddingBottom: 'clamp(3rem, 8vw, 5.5rem)',
       }}
     >
-      <div className="group-photo-block relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-12">
+      {/* Floral décor — desktop only so name lists stay readable on phones */}
+      <div className="hidden md:block" aria-hidden="true">
+        <SectionDecor position="bottom-left" src="/decorative-3.png" className="mix-blend-multiply" />
+      </div>
+
+      <div className="group-photo-block relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-12" style={{ zIndex: 1 }}>
         <div className="mb-8 text-center sm:mb-10">
-          <div className="mb-3 flex items-center justify-center gap-4 sm:mb-5">
-            <span
-              className="text-xs tracking-[0.4em] uppercase"
-              style={{ fontFamily: 'var(--font-inter)', color: '#0F2A1F' }}
-            >
-              A Shared Memory
-            </span>
-          </div>
           <h2
             style={{
               fontFamily: 'var(--font-cormorant)',
@@ -83,6 +81,20 @@ export default function GroupPhotoSection() {
         </div>
 
         <figure className="m-0">
+          <p
+            style={{
+              fontFamily: 'var(--font-inter)',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: 'rgba(15, 42, 31, 0.55)',
+              textAlign: 'center',
+              margin: '0 0 1rem',
+            }}
+          >
+            Photo taken in 1947
+          </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/group-photo.png"

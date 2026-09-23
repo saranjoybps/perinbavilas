@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { errorResponse, verifyAuth } from '@/lib/api-helpers';
-import { sendWelcomeEmail } from '@/lib/email';
+import { sendWelcomeEmailWithRetry } from '@/lib/email';
+import {
+  MAX_BULK_USERS,
+  resolveDisplayName,
+} from '@/lib/user-import';
+
+export const maxDuration = 300;
 
 const ROLE_OPTIONS = ['member', 'admin'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_GAP_MS = 450;
+const CREATE_ATTEMPTS = 3;
 
 function normalizeRole(role) {
-  if (role === 'super_admin') return 'admin'; // legacy → admin
+  if (role === 'super_admin') return 'admin';
   return ROLE_OPTIONS.includes(role) ? role : 'member';
 }
 
@@ -32,7 +40,7 @@ function buildUserData({ uid, email, displayName, role, code }) {
   return data;
 }
 
-function mapCreateError(err, email) {
+function mapCreateError(err) {
   const code = err?.code || '';
   const message = err?.message || 'Failed to create user';
 
@@ -54,9 +62,82 @@ async function emailAlreadyExists(email) {
     return true;
   } catch (err) {
     if (err?.code === 'auth/user-not-found') return false;
-    // If lookup fails for another reason, fall through and let createUser decide.
     return false;
   }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Create Auth + Firestore only after invite email has already succeeded.
+ * Retries create because the member already received credentials.
+ */
+async function createAccountAfterInvite({
+  email,
+  password,
+  displayName,
+  role,
+  code,
+  nameSource,
+}) {
+  let lastError;
+  for (let i = 0; i < CREATE_ATTEMPTS; i += 1) {
+    let authUser = null;
+    try {
+      authUser = await adminAuth.createUser({
+        email,
+        password,
+        displayName,
+      });
+
+      await adminAuth.setCustomUserClaims(authUser.uid, { role });
+
+      const now = new Date();
+      const userData = {
+        ...buildUserData({
+          uid: authUser.uid,
+          email,
+          displayName,
+          role,
+          code,
+        }),
+        nameSource,
+        inviteEmailedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const authData = {
+        uid: authUser.uid,
+        email,
+        displayName,
+        role,
+        createdAt: now,
+        updatedAt: now,
+      };
+      if (code) authData.code = code;
+
+      const batch = adminDb.batch();
+      batch.set(adminDb.collection('users').doc(authUser.uid), userData, { merge: true });
+      batch.set(adminDb.collection('authentication').doc(authUser.uid), authData, { merge: true });
+      await batch.commit();
+
+      return { authUser, userData };
+    } catch (err) {
+      lastError = err;
+      if (authUser?.uid) {
+        await adminAuth.deleteUser(authUser.uid).catch(() => {});
+      }
+      // Don't retry hard conflicts
+      if (err?.code === 'auth/email-already-exists' || err?.code === 'auth/invalid-password') {
+        throw err;
+      }
+      if (i < CREATE_ATTEMPTS - 1) await sleep(400 * (i + 1));
+    }
+  }
+  throw lastError || new Error('Failed to create account');
 }
 
 export async function POST(request) {
@@ -71,25 +152,36 @@ export async function POST(request) {
     if (!Array.isArray(users) || users.length === 0) {
       return NextResponse.json({ error: 'users array is required' }, { status: 400 });
     }
-    if (users.length > 100) {
-      return NextResponse.json({ error: 'Maximum 100 users per bulk import' }, { status: 400 });
+    if (users.length > MAX_BULK_USERS) {
+      return NextResponse.json(
+        {
+          error: `Maximum ${MAX_BULK_USERS} users per import. Split larger lists into batches for reliable invite emails.`,
+        },
+        { status: 400 },
+      );
     }
 
-    const results = { created: 0, failed: 0, errors: [] };
+    const results = {
+      created: 0,
+      failed: 0,
+      emailed: 0,
+      emailFailed: 0,
+      errors: [],
+    };
     const seenEmails = new Set();
+    let emailsSentInBatch = 0;
 
     for (const entry of users) {
       const cleanEmail = String(entry.email || '').trim().toLowerCase();
-      const cleanName = String(entry.displayName || entry.name || '').trim();
       const cleanPassword = String(entry.password || '');
       const cleanCode = String(entry.code || '').trim();
       const normalizedRole = normalizeRole(entry.role);
 
-      if (!cleanEmail || !cleanName || !cleanPassword) {
+      if (!cleanEmail || !cleanPassword) {
         results.failed++;
         results.errors.push({
           email: cleanEmail || '(missing)',
-          error: 'email, name, and temporary password are required',
+          error: 'email and temporary password are required',
         });
         continue;
       }
@@ -125,56 +217,57 @@ export async function POST(request) {
         continue;
       }
 
+      const { displayName: cleanName, source: nameSource } = await resolveDisplayName({
+        name: entry.name,
+        displayName: entry.displayName,
+        email: cleanEmail,
+        code: cleanCode,
+      });
+
+      // 1) Invite email first — no Auth/Firestore user unless this succeeds
+      if (emailsSentInBatch > 0) await sleep(EMAIL_GAP_MS);
+
       try {
-        const authUser = await adminAuth.createUser({
+        await sendWelcomeEmailWithRetry({
+          email: cleanEmail,
+          displayName: cleanName,
+          password: cleanPassword,
+        });
+      } catch (mailErr) {
+        results.failed++;
+        results.emailFailed++;
+        results.errors.push({
+          email: cleanEmail,
+          error: `Invite email failed — user was NOT created: ${mailErr?.message || 'SMTP error'}`,
+        });
+        console.error(`Invite email failed for ${cleanEmail}; skipping account create:`, mailErr);
+        continue;
+      }
+
+      results.emailed++;
+      emailsSentInBatch++;
+
+      // 2) Only create account after invite was sent
+      try {
+        await createAccountAfterInvite({
           email: cleanEmail,
           password: cleanPassword,
-          displayName: cleanName,
-        });
-
-        const now = new Date();
-
-        await adminAuth.setCustomUserClaims(authUser.uid, { role: normalizedRole });
-
-        const userData = {
-          ...buildUserData({
-            uid: authUser.uid,
-            email: cleanEmail,
-            displayName: cleanName,
-            role: normalizedRole,
-            code: cleanCode,
-          }),
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        const authData = {
-          uid: authUser.uid,
-          email: cleanEmail,
           displayName: cleanName,
           role: normalizedRole,
-          createdAt: now,
-          updatedAt: now,
-        };
-        if (cleanCode) authData.code = cleanCode;
-
-        const batch = adminDb.batch();
-        batch.set(adminDb.collection('users').doc(authUser.uid), userData, { merge: true });
-        batch.set(adminDb.collection('authentication').doc(authUser.uid), authData, { merge: true });
-        await batch.commit();
-
-        sendWelcomeEmail({
-          email: cleanEmail,
-          displayName: cleanName,
-          password: cleanPassword,
-        }).catch((err) => {
-          console.error(`Failed to send welcome email to ${cleanEmail}:`, err);
+          code: cleanCode,
+          nameSource,
         });
-
         results.created++;
       } catch (err) {
         results.failed++;
-        results.errors.push({ email: cleanEmail, error: mapCreateError(err, cleanEmail) });
+        results.errors.push({
+          email: cleanEmail,
+          error: `Invite email was sent, but account could not be created: ${mapCreateError(err)}. Re-try this row (email may already have the invite).`,
+        });
+        console.error(
+          `CRITICAL: invite sent for ${cleanEmail} but account create failed:`,
+          err,
+        );
       }
     }
 

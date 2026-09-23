@@ -107,13 +107,7 @@ export default function FamilyBookPage() {
             Choose a volume below to open the family book PDF.
           </p>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-              gap: '0.85rem',
-            }}
-          >
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {FAMILY_BOOK_PDFS.map((book) => (
               <a
                 key={book.id}
@@ -126,22 +120,11 @@ export default function FamilyBookPage() {
                   flexDirection: 'column',
                   alignItems: 'flex-start',
                   justifyContent: 'space-between',
-                  minHeight: 140,
-                  padding: '1.15rem 1.1rem',
+                  minHeight: 128,
+                  padding: '1rem 0.95rem',
                   textDecoration: 'none',
                   borderTop: '2px solid rgba(15, 42, 31,0.4)',
-                  transition: 'transform 0.2s, border-color 0.2s, background 0.2s',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.borderTopColor = '#0F2A1F';
-                  e.currentTarget.style.background = 'rgba(255,247,237,0.95)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderTopColor = 'rgba(15, 42, 31,0.4)';
-                  e.currentTarget.style.background = '';
+                  WebkitTapHighlightColor: 'transparent',
                 }}
               >
                 <div>

@@ -1,25 +1,26 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useWelcomeGate } from '@/context/WelcomeGateContext';
+import { cloudinaryPoster, cloudinaryVideo } from '@/lib/media';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const HERO_VIDEO =
-  'https://res.cloudinary.com/bsaqrrl4/video/upload/q_auto:eco/v1790068368/11904662_1280_720_60fps_nhnbbv.mp4';
-const HERO_POSTER =
-  'https://res.cloudinary.com/bsaqrrl4/video/upload/so_2,w_1600,q_auto,f_jpg/v1790068368/11904662_1280_720_60fps_nhnbbv.jpg';
+const HERO_PATH = 'v1790068368/11904662_1280_720_60fps_nhnbbv.mp4';
+const HERO_VIDEO = cloudinaryVideo(HERO_PATH, 1440);
+const HERO_POSTER = cloudinaryPoster(HERO_PATH, 1600);
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 1.15, delay: 0.15 + i * 0.14, ease: [0.25, 0.1, 0.25, 1] },
+    transition: { duration: 1.05, delay: 0.12 + i * 0.12, ease: [0.25, 0.1, 0.25, 1] },
   }),
 };
 
@@ -27,10 +28,23 @@ export default function HeroSection() {
   const sectionRef = useRef(null);
   const contentRef = useRef(null);
   const videoRef = useRef(null);
+  const { ready, active: welcomeActive } = useWelcomeGate();
+  const [canLoadVideo, setCanLoadVideo] = useState(false);
+
+  // Don't compete with welcome assets — start hero video after gate is done
+  useEffect(() => {
+    if (!ready || welcomeActive) {
+      setCanLoadVideo(false);
+      return undefined;
+    }
+    const id = window.setTimeout(() => setCanLoadVideo(true), 120);
+    return () => window.clearTimeout(id);
+  }, [ready, welcomeActive]);
 
   useEffect(() => {
+    if (!canLoadVideo) return undefined;
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return undefined;
     video.muted = true;
     video.playsInline = true;
     const tryPlay = () => {
@@ -38,12 +52,8 @@ export default function HeroSection() {
     };
     tryPlay();
     video.addEventListener('loadeddata', tryPlay);
-    document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
-    return () => {
-      video.removeEventListener('loadeddata', tryPlay);
-      document.removeEventListener('touchstart', tryPlay);
-    };
-  }, []);
+    return () => video.removeEventListener('loadeddata', tryPlay);
+  }, [canLoadVideo]);
 
   useGSAP(() => {
     const mm = gsap.matchMedia();
@@ -74,20 +84,33 @@ export default function HeroSection() {
         background: '#0F2A1F',
       }}
     >
-      <video
-        ref={videoRef}
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{ zIndex: 0, pointerEvents: 'none' }}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        poster={HERO_POSTER}
+      {/* Poster always visible for instant paint */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={HERO_POSTER}
+        alt=""
         aria-hidden="true"
-      >
-        <source src={HERO_VIDEO} type="video/mp4" />
-      </video>
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{ zIndex: 0 }}
+        decoding="async"
+      />
+
+      {canLoadVideo && (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ zIndex: 0, pointerEvents: 'none' }}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster={HERO_POSTER}
+          aria-hidden="true"
+        >
+          <source src={HERO_VIDEO} type="video/mp4" />
+        </video>
+      )}
 
       <div
         className="absolute inset-0 pointer-events-none"
@@ -239,7 +262,7 @@ export default function HeroSection() {
           style={{ bottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.9, duration: 0.9 }}
+          transition={{ delay: 1.4, duration: 0.8 }}
           aria-hidden="true"
         >
           <span

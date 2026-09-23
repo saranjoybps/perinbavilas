@@ -15,7 +15,7 @@ import { CSS } from "@dnd-kit/utilities";
 const inputStyle = {
   width: '100%',
   background: 'rgba(255,255,255,0.72)',
-  border: '1px solid rgba(212,175,55,0.22)',
+  border: '1px solid rgba(15, 42, 31,0.22)',
   padding: '0.4rem 0.55rem',
   fontFamily: 'var(--font-inter)',
   fontSize: '0.75rem',
@@ -45,9 +45,9 @@ const btnOutline = {
   letterSpacing: '0.12em',
   textTransform: 'uppercase' as const,
   padding: '0.45rem 1rem',
-  border: '1px solid rgba(196,155,26,0.35)',
+  border: '1px solid rgba(15, 42, 31,0.35)',
   background: 'transparent',
-  color: '#C49B1A',
+  color: '#0F2A1F',
   cursor: 'pointer',
   transition: 'all 0.2s',
 };
@@ -57,7 +57,7 @@ function SortableRow({ child, index, onUpdate, onDelete }: { child: Child; index
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   return (
-    <tr ref={setNodeRef} style={{ ...style, borderBottom: '1px solid rgba(212,175,55,0.08)' }}>
+    <tr ref={setNodeRef} style={{ ...style, borderBottom: '1px solid rgba(15, 42, 31,0.08)' }}>
       <td style={{ ...tdStyle, width: '2rem' }}>
         <button {...attributes} {...listeners} style={{ cursor: 'grab', background: 'none', border: 'none', color: 'rgba(26,16,8,0.35)', fontSize: '0.85rem' }}>⋮⋮</button>
       </td>
@@ -144,10 +144,10 @@ export function ChildrenEditor({ children, onChange, parentCode }: ChildrenEdito
   return (
     <div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div style={{ overflowX: 'auto', border: '1px solid rgba(212,175,55,0.12)' }}>
+        <div style={{ overflowX: 'auto', border: '1px solid rgba(15, 42, 31,0.12)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
+              <tr style={{ borderBottom: '1px solid rgba(15, 42, 31,0.2)' }}>
                 <th style={thStyle}></th>
                 <th style={thStyle}>Code</th>
                 <th style={thStyle}>Name</th>
@@ -172,8 +172,8 @@ export function ChildrenEditor({ children, onChange, parentCode }: ChildrenEdito
       <button
         style={{ ...btnOutline, marginTop: '0.75rem' }}
         onClick={addChild}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#C49B1A'; e.currentTarget.style.color = '#FFF7ED'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C49B1A'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#0F2A1F'; e.currentTarget.style.color = '#FFF7ED'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#0F2A1F'; }}
       >+ Add Child</button>
     </div>
   );

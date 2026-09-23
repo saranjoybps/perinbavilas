@@ -1,107 +1,78 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SectionDecor from '@/components/ui/SectionDecor';
+import GalleryImageFrame from '@/components/gallery/GalleryImageFrame';
 
 gsap.registerPlugin(ScrollTrigger);
-
-const GALLERY_ITEMS = [
-  { id: 1, label: 'Family Gatherings', src: '/gallery/gatherings.jpg' },
-  { id: 2, label: 'Celebrations',      src: '/gallery/celebrations.jpg' },
-  { id: 3, label: 'Milestones',        src: '/gallery/milestones.jpg' },
-  { id: 4, label: 'Heritage',          src: '/gallery/heritage.jpg' },
-  { id: 5, label: 'Traditions',        src: '/gallery/traditions.jpg' },
-  { id: 6, label: 'Memories',          src: '/gallery/memories.jpg' },
-];
-
-function GalleryCard({ item, index }) {
-  return (
-    <div
-      className="gallery-card gallery-card-init relative overflow-hidden group"
-      style={{ aspectRatio: index === 0 || index === 3 ? '1 / 1.3' : '1 / 1' }}
-    >
-      <img
-        src={item.src}
-        alt={item.label}
-        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-      />
-
-      <div
-        className="absolute inset-0 flex items-end p-4 sm:p-5"
-        style={{
-          background: 'linear-gradient(to top, rgba(26,16,8,0.55) 0%, transparent 55%)',
-        }}
-      >
-        <span
-          style={{
-            fontFamily: 'var(--font-cormorant)',
-            fontStyle: 'italic',
-            fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
-            color: '#FFF7ED',
-          }}
-        >
-          {item.label}
-        </span>
-      </div>
-
-      <div
-        className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full"
-        style={{ background: 'rgba(255,251,245,0.82)', backdropFilter: 'blur(6px)' }}
-        aria-label="Members only"
-      >
-        <svg width="11" height="13" viewBox="0 0 11 13" fill="none" aria-hidden="true">
-          <rect x="1" y="5.5" width="9" height="7" rx="1.5" stroke="#0F2A1F" strokeWidth="1.2" />
-          <path d="M3.5 5.5V3.5a2 2 0 014 0v2" stroke="#0F2A1F" strokeWidth="1.2" strokeLinecap="round" />
-        </svg>
-      </div>
-    </div>
-  );
+/**
+ * Deferred refresh so Legacy's pin recalculates after gallery images
+ * change layout — never during React's commit/reconcile.
+ */
+function scheduleScrollRefresh() {
+  return setTimeout(() => {
+    requestAnimationFrame(() => {
+      try {
+        ScrollTrigger.refresh();
+      } catch {
+        /* ignore mid-unmount races */
+      }
+    });
+  }, 120);
 }
 
 export default function GallerySection() {
   const sectionRef = useRef(null);
-  const headRef    = useRef(null);
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
-  useGSAP(() => {
-    gsap.fromTo(
-      headRef.current,
-      { opacity: 0, y: 24 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.95,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: headRef.current,
-          start: 'top 85%',
-          toggleActions: 'play none none none',
-          once: true,
-        },
-      },
-    );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/gallery?status=approved&showOnHome=true');
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        if (!cancelled) setItems(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
-    ScrollTrigger.batch(
-      sectionRef.current.querySelectorAll('.gallery-card'),
-      {
-        start: 'top 90%',
-        onEnter: (batch) =>
-          gsap.to(batch, {
-            opacity: 1,
-            y: 0,
-            stagger: { each: 0.07 },
-            duration: 0.9,
-            ease: 'power2.out',
-            overwrite: 'auto',
-          }),
-        once: true,
-      },
-    );
-  }, { scope: sectionRef });
+  useEffect(() => {
+    if (!loaded || !sectionRef.current) return undefined;
+
+    let timer = scheduleScrollRefresh();
+    const imgs = Array.from(sectionRef.current.querySelectorAll('img'));
+
+    const onImageSettled = () => {
+      clearTimeout(timer);
+      timer = scheduleScrollRefresh();
+    };
+
+    imgs.forEach((img) => {
+      if (!img.complete) {
+        img.addEventListener('load', onImageSettled);
+        img.addEventListener('error', onImageSettled);
+      }
+    });
+
+    return () => {
+      clearTimeout(timer);
+      imgs.forEach((img) => {
+        img.removeEventListener('load', onImageSettled);
+        img.removeEventListener('error', onImageSettled);
+      });
+    };
+  }, [loaded, items]);
 
   return (
     <section
@@ -111,22 +82,27 @@ export default function GallerySection() {
       style={{
         background: '#FFFFFF',
         paddingTop: 'clamp(3.5rem, 8vw, 6.5rem)',
-        paddingBottom: 'clamp(10rem, 32vw, 11rem)',
+        paddingBottom: 'clamp(5.5rem, 16vw, 10rem)',
+        zIndex: 0,
+        isolation: 'isolate',
       }}
     >
-      <SectionDecor position="bottom-left" src="/decorative-2.png" />
+      <SectionDecor
+        position="bottom-right"
+        src="/decorative-2.png"
+        size="lg"
+        className="md:!w-[260px] lg:!w-[320px] md:!translate-x-[4%] md:!translate-y-[6%] lg:!translate-x-[5%] lg:!translate-y-[8%]"
+        style={{ opacity: 0.58 }}
+      />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-12" style={{ zIndex: 1 }}>
-        <div ref={headRef} className="mb-8 text-center sm:mb-12 md:mb-14">
-          <div className="mb-3 flex items-center justify-center gap-4 sm:mb-5">
-            <span
-              className="text-xs tracking-[0.4em] uppercase"
-              style={{ fontFamily: 'var(--font-inter)', color: '#0F2A1F' }}
-            >
-              Visual Memory
-            </span>
-          </div>
-
+      <div className="relative z-[1] mx-auto max-w-7xl px-4 sm:px-6 lg:px-12">
+        <motion.div
+          className="mb-8 text-center sm:mb-12 md:mb-14"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.35 }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        >
           <h2
             style={{
               fontFamily: 'var(--font-cormorant)',
@@ -145,34 +121,80 @@ export default function GallerySection() {
               fontFamily: 'var(--font-inter)',
               fontSize: '1.05rem',
               color: 'rgba(15,42,31,0.52)',
-              maxWidth: 400,
+              maxWidth: 420,
               lineHeight: 1.75,
               margin: '0 auto',
             }}
           >
-            A glimpse into the family gallery — full access for members.
+            A glimpse of family moments — explore the full collection on the Gallery page.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 mb-12">
-          {GALLERY_ITEMS.map((item, i) => (
-            <GalleryCard key={item.id} item={item} index={i} />
-          ))}
-        </div>
+        {!loaded ? (
+          <div className="flex justify-center py-16 mb-12">
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                border: '1.5px solid rgba(15, 42, 31,0.2)',
+                borderTopColor: '#0F2A1F',
+                animation: 'spin 1s linear infinite',
+              }}
+            />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-center mb-12 py-10">
+            <p
+              style={{
+                fontFamily: 'var(--font-inter)',
+                fontSize: '0.95rem',
+                color: 'rgba(15,42,31,0.45)',
+              }}
+            >
+              Featured photos will appear here once published.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-12">
+            {items.map((item, i) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{
+                  duration: 0.65,
+                  delay: Math.min(i * 0.06, 0.3),
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
+                <GalleryImageFrame
+                  src={item.url}
+                  alt={item.caption || 'Family moment'}
+                  caption={item.caption}
+                  fullWidth
+                  maxHeight="min(58vh, 420px)"
+                />
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <div className="text-center">
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link
-              href="/login"
+              href="/gallery"
               className="inline-flex items-center gap-3 px-10 py-4 text-sm tracking-widest uppercase"
               style={{
                 fontFamily: 'var(--font-inter)',
                 border: '1px solid rgba(15, 42, 31,0.5)',
                 color: '#0F2A1F',
                 letterSpacing: '0.12em',
+                background: '#FFFFFF',
               }}
             >
-              Access Family Gallery
+              View Full Gallery
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <path d="M1 7h12M8 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>

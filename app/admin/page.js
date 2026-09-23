@@ -29,11 +29,11 @@ export default function AdminPage() {
   }, [authLoading, isAdmin]);
 
   const CARDS = [
-    { label: 'Pending Requests', value: stats.requests, href: '/admin/requests',     icon: '◎', accent: '#C09030' },
-    { label: 'Total Users',      value: stats.users,    href: '/admin/users',         icon: '◉', accent: '#5A8FAA' },
+    { label: 'Pending Requests', value: stats.requests, href: '/admin/requests',     icon: '◎', accent: '#0F2A1F' },
+    { label: 'Total Users',      value: stats.users,    href: '/admin/users',         icon: '◉', accent: '#1A3D2E' },
     { label: 'Gallery Photos',   value: stats.gallery,  href: '/admin/gallery',       icon: '▣', accent: '#6BA888' },
-    { label: 'Events',           value: stats.events,   href: '/admin/events',        icon: '◷', accent: '#7A9BB5' },
-    { label: 'Announcements',    value: stats.announcements, href: '/admin/announcements', icon: '◎', accent: '#6BA888' },
+    { label: 'Events',           value: stats.events,   href: '/admin/events',        icon: '◷', accent: '#A8C4B4' },
+    { label: 'Announcements',    value: stats.announcements, href: '/admin/announcements', icon: '◎', accent: '#1A3D2E' },
   ];
 
   return (

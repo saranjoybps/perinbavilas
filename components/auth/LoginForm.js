@@ -1,16 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { signInWithEmail } from '@/lib/firebase/auth';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginForm() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [form,    setForm]   = useState({ email: '', password: '' });
   const [error,   setError]  = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Already signed in (e.g. after a failed cookie race) → go to portal
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/dashboard/family-book');
+    }
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,10 +27,9 @@ export default function LoginForm() {
     setLoading(true);
     try {
       await signInWithEmail(form.email, form.password);
-      router.push('/dashboard');
+      router.replace('/dashboard/family-book');
     } catch (err) {
       setError(friendlyError(err.code));
-    } finally {
       setLoading(false);
     }
   };
