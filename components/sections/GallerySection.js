@@ -12,6 +12,7 @@ gsap.registerPlugin(ScrollTrigger);
 /**
  * Deferred refresh so Legacy's pin recalculates after gallery images
  * change layout — never during React's commit/reconcile.
+ * Longer debounce reduces mid-scroll jumps on mobile while images settle.
  */
 function scheduleScrollRefresh() {
   return setTimeout(() => {
@@ -22,7 +23,7 @@ function scheduleScrollRefresh() {
         /* ignore mid-unmount races */
       }
     });
-  }, 120);
+  }, 450);
 }
 
 export default function GallerySection() {

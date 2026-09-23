@@ -30,38 +30,81 @@ export default function LegacyStatement() {
     if (!section) return;
 
     const words = section.querySelectorAll('.word-token');
+    gsap.set(words, { opacity: 0, y: 24 });
 
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: section,
-        start: 'top top',
-        end: '+=1000',
-        scrub: 1.2,
-        pin: true,
-        pinSpacing: true,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
-        // Match pin-spacer to section so scroll-back never flashes white/empty green
-        onRefresh: (self) => {
-          const spacer = self.pin?.parentNode;
-          if (spacer && spacer.classList?.contains('pin-spacer')) {
-            spacer.style.background = '#0F2A1F';
-          }
+    const mm = gsap.matchMedia();
+
+    // Desktop: pin + scrubbed word reveal
+    mm.add('(min-width: 768px)', () => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: 'top top',
+          end: '+=1000',
+          scrub: 1.2,
+          pin: true,
+          pinSpacing: true,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+          onRefresh: (self) => {
+            const spacer = self.pin?.parentNode;
+            if (spacer?.classList?.contains('pin-spacer')) {
+              spacer.style.background = '#0F2A1F';
+            }
+          },
         },
-      },
+      });
+
+      tl.to(
+        words,
+        {
+          opacity: 1,
+          y: 0,
+          stagger: { each: 0.055 },
+          duration: 0.35,
+          ease: 'power2.out',
+        },
+        0.05,
+      );
+
+      return () => {
+        tl.scrollTrigger?.kill();
+        tl.kill();
+      };
     });
 
-    tl.from(
-      words,
-      {
-        opacity: 0,
-        y: 24,
-        stagger: { each: 0.055 },
-        duration: 0.35,
-        ease: 'power2.out',
-      },
-      0.05,
-    );
+    // Mobile: no pin (avoids snap over gallery + green pin-spacer flash).
+    // Words still reveal as the quote section scrolls through the viewport.
+    mm.add('(max-width: 767px)', () => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: 'top 85%',
+          end: 'top 35%',
+          scrub: 0.65,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      tl.to(
+        words,
+        {
+          opacity: 1,
+          y: 0,
+          stagger: { each: 0.04 },
+          duration: 0.3,
+          ease: 'power2.out',
+        },
+        0,
+      );
+
+      return () => {
+        tl.scrollTrigger?.kill();
+        tl.kill();
+      };
+    });
+
+    return () => mm.revert();
   }, { scope: sectionRef });
 
   return (
@@ -72,7 +115,7 @@ export default function LegacyStatement() {
       style={{
         minHeight: '100svh',
         background: '#0F2A1F',
-        zIndex: 5,
+        zIndex: 1,
       }}
     >
       <LazyVideo

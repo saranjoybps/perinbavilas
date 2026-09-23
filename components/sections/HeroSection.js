@@ -37,22 +37,81 @@ export default function HeroSection() {
       setCanLoadVideo(false);
       return undefined;
     }
-    const id = window.setTimeout(() => setCanLoadVideo(true), 120);
+    const id = window.setTimeout(() => setCanLoadVideo(true), 80);
     return () => window.clearTimeout(id);
   }, [ready, welcomeActive]);
 
+  // Keep muted loop playing — retry after welcome/loading and if the browser pauses it
   useEffect(() => {
     if (!canLoadVideo) return undefined;
     const video = videoRef.current;
     if (!video) return undefined;
-    video.muted = true;
-    video.playsInline = true;
-    const tryPlay = () => {
-      video.play().catch(() => {});
+
+    let cancelled = false;
+
+    const arm = () => {
+      video.defaultMuted = true;
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.disablePictureInPicture = true;
+      video.controls = false;
     };
+
+    const tryPlay = () => {
+      if (cancelled || document.hidden) return;
+      arm();
+      const playPromise = video.play();
+      if (playPromise?.catch) {
+        playPromise.catch(() => {
+          /* Autoplay can fail briefly; interval / events retry */
+        });
+      }
+    };
+
+    arm();
+    if (video.readyState < 2) {
+      try {
+        video.load();
+      } catch {
+        /* ignore */
+      }
+    }
     tryPlay();
-    video.addEventListener('loadeddata', tryPlay);
-    return () => video.removeEventListener('loadeddata', tryPlay);
+
+    const onReady = () => tryPlay();
+    const onPause = () => {
+      // Background hero should never stay paused while the tab is visible
+      if (!document.hidden && !cancelled) {
+        window.requestAnimationFrame(tryPlay);
+      }
+    };
+    const onVisibility = () => {
+      if (!document.hidden) tryPlay();
+    };
+
+    video.addEventListener('loadeddata', onReady);
+    video.addEventListener('canplay', onReady);
+    video.addEventListener('canplaythrough', onReady);
+    video.addEventListener('pause', onPause);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const retry = window.setInterval(() => {
+      if (!cancelled && video.paused && !document.hidden) tryPlay();
+    }, 700);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(retry);
+      video.removeEventListener('loadeddata', onReady);
+      video.removeEventListener('canplay', onReady);
+      video.removeEventListener('canplaythrough', onReady);
+      video.removeEventListener('pause', onPause);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [canLoadVideo]);
 
   useGSAP(() => {
@@ -104,9 +163,13 @@ export default function HeroSection() {
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           poster={HERO_POSTER}
+          controls={false}
+          disablePictureInPicture
+          disableRemotePlayback
           aria-hidden="true"
+          tabIndex={-1}
         >
           <source src={HERO_VIDEO} type="video/mp4" />
         </video>
